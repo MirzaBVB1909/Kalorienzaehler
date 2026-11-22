@@ -25,6 +25,12 @@
     "plugins": [
       "expo-router"
     ],
-    "scheme": "kalorienzaehler"
+    "scheme": "kalorienzaehler",
+    "extra": {
+      "eas": {
+        "projectId": "56c1c6b6-ba00-4c4b-9fc4-f2be0c4bfb35"
+      }
+    },
+    "owner": "1909bvb09"
   }
 }
