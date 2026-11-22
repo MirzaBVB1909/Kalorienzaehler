@@ -1,7 +1,7 @@
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 
-import { apiErrorResponse, FALLBACK, getClient, json, MODEL } from '../../server/claude';
+import { apiErrorResponse, FALLBACK, findPhoto, getClient, json, MODEL } from '../../server/claude';
 
 /**
  * Rezeptvorschläge bzw. Wochenplan mit Einkaufsliste – passend zu den restlichen
@@ -29,6 +29,8 @@ const Recipe = z.object({
   steps: z.array(z.string()).describe('Zubereitungsschritte, kurz und klar'),
   uses_offers: z.array(z.string()).describe('Namen der verwendeten Angebote aus der Liste (leer, wenn keine)'),
   day: z.string().describe('Nur beim Wochenplan: Wochentag, z. B. "Montag"; sonst leer'),
+  image_query: z.string().describe('Kurzer ENGLISCHER Suchbegriff für ein Food-Foto des fertigen Gerichts (2–5 Wörter, z. B. "chicken paprika stew", "turkish scrambled eggs menemen")'),
+  emoji: z.string().describe('Ein einzelnes passendes Essens-Emoji, z. B. "🍗"'),
 });
 
 const ShoppingItem = z.object({
@@ -134,8 +136,11 @@ export async function POST(request: Request) {
       messages: [{ role: 'user', content: lines.join('\n') }],
     });
     if (response.stop_reason === 'refusal') return json({ error: 'refused', message: 'Dazu konnten keine Vorschläge erstellt werden.' }, 422);
-    if (!response.parsed_output) return json({ error: 'no_result', message: 'Keine verwertbare Antwort. Bitte nochmal versuchen.' }, 502);
-    return json(response.parsed_output);
+    const result = response.parsed_output;
+    if (!result) return json({ error: 'no_result', message: 'Keine verwertbare Antwort. Bitte nochmal versuchen.' }, 502);
+    // Fotos parallel suchen (kostenlos über Pexels, falls eingerichtet).
+    const photos = await Promise.all(result.recipes.map((r) => findPhoto(r.image_query)));
+    return json({ ...result, recipes: result.recipes.map((r, i) => ({ ...r, photo: photos[i] })) });
   } catch (error) {
     return apiErrorResponse(error);
   }

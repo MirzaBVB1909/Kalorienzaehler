@@ -113,6 +113,10 @@ export type RecipeSuggestion = {
   steps: string[];
   uses_offers: string[];
   day: string;
+  image_query: string;
+  emoji: string;
+  /** Foto von Pexels (kostenlos), null wenn keines gefunden/eingerichtet. */
+  photo?: { url: string; photographer: string; photographerUrl: string; pexelsUrl: string; alt: string } | null;
 };
 
 export type RecipeResult = {

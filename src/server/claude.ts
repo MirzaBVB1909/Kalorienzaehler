@@ -44,6 +44,33 @@ export const MODEL = 'claude-opus-5-5';
 /** Bei einer Sicherheits-Ablehnung springt automatisch ein passendes anderes Modell ein. */
 export const FALLBACK = { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const };
 
+export type RecipePhoto = { url: string; photographer: string; photographerUrl: string; pexelsUrl: string; alt: string };
+
+/**
+ * Sucht ein passendes, kostenloses Foto bei Pexels (pexels.com). Braucht PEXELS_API_KEY;
+ * ohne Schlüssel oder bei Fehlern kommt null zurück (die App zeigt dann ein Symbol).
+ */
+export async function findPhoto(query: string): Promise<RecipePhoto | null> {
+  const key = env('PEXELS_API_KEY')?.trim();
+  if (!key || !query.trim()) return null;
+  const base = env('PEXELS_API_URL') || 'https://api.pexels.com/v1';
+  try {
+    const res = await fetch(`${base}/search?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape&size=medium`, {
+      headers: { Authorization: key },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      photos?: { url: string; alt?: string; photographer: string; photographer_url: string; src: { landscape?: string; medium?: string } }[];
+    };
+    const p = data.photos?.[0];
+    const url = p?.src.landscape || p?.src.medium;
+    if (!p || !url) return null;
+    return { url, photographer: p.photographer, photographerUrl: p.photographer_url, pexelsUrl: p.url, alt: p.alt ?? '' };
+  } catch {
+    return null;
+  }
+}
+
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 export type ImageType = (typeof IMAGE_TYPES)[number];
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

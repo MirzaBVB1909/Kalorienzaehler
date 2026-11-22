@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Chips, confirm, Field, fmt, parseNum, SectionTitle } from '../../components/ui';
 import { FlyerResult, readFlyer, RecipeResult, RecipeSuggestion, suggestRecipes, takePhoto } from '../../lib/ai';
@@ -314,8 +314,20 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
 function RecipeCard({ recipe: r, onLog, onSave, onShopping }: { recipe: RecipeSuggestion; onLog: () => void; onSave: () => void; onShopping: () => void }) {
   const [open, setOpen] = useState(false);
   return (
-    <Card>
-      <Pressable onPress={() => setOpen(!open)}>
+    <Card style={{ paddingTop: 0, overflow: 'hidden' }}>
+      {r.photo ? (
+        <View style={styles.photoWrap}>
+          <Image source={{ uri: r.photo.url }} style={styles.photo} resizeMode="cover" accessibilityLabel={r.photo.alt || r.name} />
+          <Pressable onPress={() => Linking.openURL(r.photo!.pexelsUrl)} style={styles.credit}>
+            <Text style={styles.creditText}>Foto: {r.photo.photographer} / Pexels</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.emojiWrap}>
+          <Text style={styles.emoji}>{r.emoji || '🍽️'}</Text>
+        </View>
+      )}
+      <Pressable onPress={() => setOpen(!open)} style={{ paddingTop: 14 }}>
         {!!r.day && <Text style={styles.day}>{r.day}</Text>}
         <Text style={styles.recipeTitle}>{r.name}</Text>
         <Text style={styles.muted}>{r.description}</Text>
@@ -715,6 +727,12 @@ const styles = StyleSheet.create({
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   boxTick: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  photoWrap: { marginHorizontal: -16, height: 170, backgroundColor: colors.bg },
+  photo: { width: '100%', height: '100%' },
+  credit: { position: 'absolute', right: 8, bottom: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  creditText: { color: '#fff', fontSize: 11 },
+  emojiWrap: { marginHorizontal: -16, height: 110, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  emoji: { fontSize: 56 },
   day: { fontSize: 12, fontWeight: '800', color: colors.primary, textTransform: 'uppercase', marginBottom: 2 },
   recipeTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 4 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },

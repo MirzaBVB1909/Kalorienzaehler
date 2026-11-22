@@ -65,6 +65,7 @@ Die Foto-Erkennung läuft über eine Server-Funktion (`src/app/api/analyze+api.t
 | Name | Sichtbarkeit | Wert |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Sensitive | API-Schlüssel von platform.claude.com |
+| `PEXELS_API_KEY` | Sensitive | optional: kostenloser Schlüssel von pexels.com/api für Rezeptfotos (ohne Schlüssel: Symbole) |
 
 Wichtig: Sichtbarkeit **Sensitive** (nicht *Secret* – Secrets erreichen den Web-Server nicht). Kostenschutz: vorausbezahltes Guthaben ohne automatische Aufladung.
 
