@@ -27,6 +27,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="planner"
+        options={{
+          title: 'Planer',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🛒" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: 'Verlauf',

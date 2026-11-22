@@ -41,7 +41,7 @@ export type Photo = { base64: string; mediaType: 'image/jpeg'; previewUri: strin
  * Öffnet Kamera bzw. Fotoauswahl (Web/iPhone) und verkleinert das Bild auf max. 1280 px als JPEG –
  * das macht die Analyse schneller und günstiger. Gibt null zurück, wenn abgebrochen.
  */
-export function takePhoto(): Promise<Photo | null> {
+export function takePhoto(options: { camera?: boolean } = { camera: true }): Promise<Photo | null> {
   if (Platform.OS !== 'web') {
     return Promise.reject(new Error('Die Foto-Erkennung ist in der Web-App verfügbar.'));
   }
@@ -49,7 +49,8 @@ export function takePhoto(): Promise<Photo | null> {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.setAttribute('capture', 'environment');
+    // Ohne capture bietet das iPhone Kamera, Fotomediathek (z. B. Screenshots) und Dateien an.
+    if (options.camera) input.setAttribute('capture', 'environment');
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
@@ -75,23 +76,69 @@ export function takePhoto(): Promise<Photo | null> {
   });
 }
 
-/** Schickt das Foto an die eigene Server-Funktion (/api/analyze), die Claude fragt. */
-export async function analyzePhoto(photo: Photo, mode: AiMode, code: string): Promise<AiAnalysis> {
+/** POST an eine eigene Server-Funktion; wirft Fehler mit deutscher Meldung. */
+async function post<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
   let res: Response;
   try {
-    res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-app-code': code },
-      body: JSON.stringify({ image: photo.base64, mediaType: photo.mediaType, mode }),
-    });
+    res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
   } catch {
     throw new Error('Keine Internetverbindung. Bitte nochmal versuchen.');
   }
-  const data = (await res.json().catch(() => null)) as (AiAnalysis & { error?: string; message?: string }) | null;
+  const data = (await res.json().catch(() => null)) as (T & { error?: string; message?: string }) | null;
   if (!res.ok || !data || data.error) {
     const err = new Error(data?.message ?? `Fehler ${res.status}`);
     (err as Error & { code?: string }).code = data?.error;
     throw err;
   }
   return data;
+}
+
+/** Schickt das Foto an die eigene Server-Funktion (/api/analyze), die Claude fragt. */
+export function analyzePhoto(photo: Photo, mode: AiMode, code: string): Promise<AiAnalysis> {
+  return post<AiAnalysis>('/api/analyze', { image: photo.base64, mediaType: photo.mediaType, mode }, { 'x-app-code': code });
+}
+
+export type RecipeSuggestion = {
+  name: string;
+  description: string;
+  servings: number;
+  minutes: number;
+  grams_per_serving: number;
+  kcal_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+  ingredients: { name: string; amount: string }[];
+  steps: string[];
+  uses_offers: string[];
+  day: string;
+};
+
+export type RecipeResult = {
+  recipes: RecipeSuggestion[];
+  shopping_list: { name: string; amount: string; store: string }[];
+  tip: string;
+};
+
+export function suggestRecipes(input: {
+  mode: 'recipes' | 'weekplan';
+  kcalLeft: number;
+  proteinLeft: number;
+  dailyKcal: number;
+  preferences: string[];
+  pantry: string;
+  offers: { product: string; price: string; store: string }[];
+  days?: number;
+}): Promise<RecipeResult> {
+  return post<RecipeResult>('/api/recipes', input);
+}
+
+export type FlyerResult = {
+  recognized: boolean;
+  store: string;
+  offers: { product: string; price: string; store: string; valid: string; category: string }[];
+};
+
+export function readFlyer(photo: Photo): Promise<FlyerResult> {
+  return post<FlyerResult>('/api/flyer', { image: photo.base64, mediaType: photo.mediaType });
 }

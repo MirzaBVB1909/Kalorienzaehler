@@ -71,18 +71,21 @@ export function Button({
   variant = 'primary',
   disabled,
   style,
+  accessibilityLabel,
 }: {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
   style?: ViewStyle;
+  accessibilityLabel?: string;
 }) {
   const bg = variant === 'primary' ? colors.primary : variant === 'danger' ? colors.danger : colors.primarySoft;
   const fg = variant === 'secondary' ? colors.primary : '#fff';
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [

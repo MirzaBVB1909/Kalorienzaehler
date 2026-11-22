@@ -17,6 +17,9 @@ export type Entry = Macros & {
 
 export type WeightLog = { date: string; kg: number };
 
+export type ShoppingItem = { id: string; name: string; amount: string; store: string; checked: boolean };
+export type Offer = { id: string; product: string; price: string; store: string; valid: string; category: string; addedAt: number };
+
 export type State = {
   entries: Entry[];
   profile: Profile;
@@ -26,6 +29,10 @@ export type State = {
   favorites: string[];
   /** Getrunkenes Wasser pro Tag in ml (YYYY-MM-DD → ml). */
   water: Record<string, number>;
+  shopping: ShoppingItem[];
+  offers: Offer[];
+  /** Vorlieben für Rezeptvorschläge (z. B. "Österreichisch", "Schnell"). */
+  recipePrefs: string[];
 };
 
 type Store = State & {
@@ -44,6 +51,14 @@ type Store = State & {
   toggleFavorite: (foodId: string) => void;
   addWater: (date: string, ml: number) => void;
   logWeight: (kg: number) => void;
+  addShopping: (items: Omit<ShoppingItem, 'id' | 'checked'>[]) => void;
+  toggleShopping: (id: string) => void;
+  removeShopping: (id: string) => void;
+  clearCheckedShopping: () => void;
+  addOffers: (offers: Omit<Offer, 'id' | 'addedAt'>[]) => void;
+  removeOffer: (id: string) => void;
+  clearOffers: () => void;
+  setRecipePrefs: (prefs: string[]) => void;
   /** Ersetzt alle Daten (Wiederherstellen aus einer Sicherung). */
   replaceAll: (s: State) => void;
   resetAll: () => void;
@@ -58,6 +73,9 @@ const INITIAL: State = {
   weights: [],
   favorites: [],
   water: {},
+  shopping: [],
+  offers: [],
+  recipePrefs: [],
 };
 
 /** Ergänzt fehlende Felder (ältere Speicherstände, Sicherungsdateien). */
@@ -70,6 +88,9 @@ export function normalizeState(parsed: Partial<State>): State {
     weights: Array.isArray(parsed.weights) ? parsed.weights : [],
     favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
     water: parsed.water && typeof parsed.water === 'object' ? parsed.water : {},
+    shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
+    offers: Array.isArray(parsed.offers) ? parsed.offers : [],
+    recipePrefs: Array.isArray(parsed.recipePrefs) ? parsed.recipePrefs : [],
     profile: { ...DEFAULT_PROFILE, ...parsed.profile },
   };
 }
@@ -164,6 +185,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const addShopping = useCallback((items: Omit<ShoppingItem, 'id' | 'checked'>[]) => {
+    setState((s) => {
+      const existing = new Set(s.shopping.filter((i) => !i.checked).map((i) => i.name.trim().toLowerCase()));
+      const fresh = items
+        .filter((i) => i.name.trim() && !existing.has(i.name.trim().toLowerCase()))
+        .map((i) => ({ ...i, name: i.name.trim(), id: uid(), checked: false }));
+      return { ...s, shopping: [...s.shopping, ...fresh] };
+    });
+  }, []);
+  const toggleShopping = useCallback((id: string) => {
+    setState((s) => ({ ...s, shopping: s.shopping.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) }));
+  }, []);
+  const removeShopping = useCallback((id: string) => {
+    setState((s) => ({ ...s, shopping: s.shopping.filter((i) => i.id !== id) }));
+  }, []);
+  const clearCheckedShopping = useCallback(() => {
+    setState((s) => ({ ...s, shopping: s.shopping.filter((i) => !i.checked) }));
+  }, []);
+  const addOffers = useCallback((offers: Omit<Offer, 'id' | 'addedAt'>[]) => {
+    const now = Date.now();
+    setState((s) => ({ ...s, offers: [...offers.map((o, i) => ({ ...o, id: uid(), addedAt: now + i })), ...s.offers].slice(0, 200) }));
+  }, []);
+  const removeOffer = useCallback((id: string) => {
+    setState((s) => ({ ...s, offers: s.offers.filter((o) => o.id !== id) }));
+  }, []);
+  const clearOffers = useCallback(() => setState((s) => ({ ...s, offers: [] })), []);
+  const setRecipePrefs = useCallback((prefs: string[]) => setState((s) => ({ ...s, recipePrefs: prefs })), []);
+
   const replaceAll = useCallback((next: State) => setState(normalizeState(next)), []);
   const resetAll = useCallback(() => setState(INITIAL), []);
 
@@ -183,6 +232,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       addWater,
       logWeight,
+      addShopping,
+      toggleShopping,
+      removeShopping,
+      clearCheckedShopping,
+      addOffers,
+      removeOffer,
+      clearOffers,
+      setRecipePrefs,
       replaceAll,
       resetAll,
     }),
@@ -200,6 +257,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       addWater,
       logWeight,
+      addShopping,
+      toggleShopping,
+      removeShopping,
+      clearCheckedShopping,
+      addOffers,
+      removeOffer,
+      clearOffers,
+      setRecipePrefs,
       replaceAll,
       resetAll,
     ],
