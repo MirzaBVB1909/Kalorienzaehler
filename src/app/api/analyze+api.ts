@@ -50,15 +50,23 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 type MediaType = (typeof ALLOWED_TYPES)[number];
 
+/** Liest eine Umgebungsvariable unabhängig von Groß-/Kleinschreibung (z. B. "Anthropic_api_key"). */
+function env(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  const key = Object.keys(process.env).find((k) => k.toUpperCase() === name);
+  return key ? process.env[key] : undefined;
+}
+
 function json(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const apiKey = env('ANTHROPIC_API_KEY')?.trim();
+  if (!apiKey) {
     return json({ error: 'not_configured', message: 'Die KI-Erkennung ist noch nicht eingerichtet (API-Schlüssel fehlt).' }, 503);
   }
-  const expected = process.env.APP_ACCESS_CODE;
+  const expected = env('APP_ACCESS_CODE')?.trim();
   if (expected && request.headers.get('x-app-code') !== expected) {
     return json({ error: 'unauthorized', message: 'Falscher oder fehlender Zugangscode.' }, 401);
   }
@@ -79,7 +87,7 @@ export async function POST(request: Request) {
       ? 'Das Foto zeigt vermutlich ein Nährwert-Etikett. Lies die Werte pro 100 g/ml ab.'
       : 'Das Foto zeigt vermutlich eine Mahlzeit oder ein Getränk. Schätze Bestandteile, Mengen und Nährwerte.';
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
   try {
     const response = await client.beta.messages.parse({
       model: 'claude-opus-5-5',
