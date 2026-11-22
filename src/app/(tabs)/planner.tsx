@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Chips, confirm, Field, fmt, SectionTitle } from '../../components/ui';
+import { Button, Card, Chips, confirm, Field, fmt, parseNum, SectionTitle } from '../../components/ui';
 import { FlyerResult, readFlyer, RecipeResult, RecipeSuggestion, suggestRecipes, takePhoto } from '../../lib/ai';
 import { dailyTargets, mealForNow, round1, sumMacros, toDateKey } from '../../lib/nutrition';
 import { useStore } from '../../lib/store';
@@ -9,7 +9,27 @@ import { colors } from '../../lib/theme';
 
 type Section = 'recipes' | 'offers' | 'shopping';
 
-const PREFS = ['Österreichisch', 'Türkisch', 'Italienisch', 'Schnell (≤ 20 Min)', 'Vegetarisch', 'Viel Eiweiß', 'Günstig', 'Low Carb'];
+const PREFS = ['Österreichisch', 'Türkisch', 'Italienisch', 'Schnell (≤ 20 Min)', 'Viel Eiweiß', 'Günstig', 'Low Carb'];
+
+/** Verbindliche Ernährungsregeln – werden der KI als strikte Vorgabe mitgegeben. */
+const DIET = ['Kein Schweinefleisch', 'Halal', 'Vegetarisch', 'Vegan', 'Kein Fisch', 'Laktosefrei', 'Glutenfrei', 'Ohne Nüsse'];
+
+/** „2,99 €“ → 2.99; Rabatte wie „-25 %“ → null. */
+function parseEuro(text: string): number | null {
+  if (/%/.test(text)) return null;
+  const m = text.replace(/\s/g, '').match(/(\d+(?:[.,]\d{1,2})?)/);
+  if (!m) return null;
+  const n = parseFloat(m[1].replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function euro(n: number): string {
+  return n.toLocaleString('de-AT', { style: 'currency', currency: 'EUR' });
+}
+
+function budgetText(n: number | null): string {
+  return n ? String(n).replace('.', ',') : '';
+}
 
 /** Startseiten der Märkte – das aktuelle Flugblatt ist dort jeweils verlinkt. */
 const STORES: { name: string; url: string; color: string }[] = [
@@ -52,7 +72,9 @@ export default function PlannerScreen() {
 /* ───────────────────────── Rezepte ───────────────────────── */
 
 function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
-  const { entries, profile, offers, recipePrefs, setRecipePrefs, addEntry, addShopping, addCustomFood } = useStore();
+  const { entries, profile, offers, recipePrefs, setRecipePrefs, dietRules, setDietRules, budgets, setBudgets, addEntry, addShopping, addCustomFood } = useStore();
+  const [perServingText, setPerServingText] = useState(budgetText(budgets.perServing));
+  const [weeklyText, setWeeklyText] = useState(budgetText(budgets.weekly));
   const [pantry, setPantry] = useState('');
   const [useOffers, setUseOffers] = useState(true);
   const [days, setDays] = useState<'3' | '5' | '7'>('5');
@@ -68,6 +90,11 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
   const proteinLeft = Math.max(0, targets.protein - eaten.protein);
 
   const togglePref = (p: string) => setRecipePrefs(recipePrefs.includes(p) ? recipePrefs.filter((x) => x !== p) : [...recipePrefs, p]);
+  const toggleDiet = (d: string) => setDietRules(dietRules.includes(d) ? dietRules.filter((x) => x !== d) : [...dietRules, d]);
+  const commitBudget = (key: 'perServing' | 'weekly', text: string) => {
+    const n = parseNum(text);
+    setBudgets({ [key]: n > 0 ? Math.round(n * 100) / 100 : null });
+  };
 
   const run = async (mode: 'recipes' | 'weekplan') => {
     setLoading(mode);
@@ -83,6 +110,9 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
         pantry,
         offers: useOffers ? offers.map((o) => ({ product: o.product, price: o.price, store: o.store })) : [],
         days: Number(days),
+        diet: dietRules,
+        budgetPerServing: budgets.perServing,
+        budgetWeekly: budgets.weekly,
       });
       setResult({ ...res, mode });
     } catch (err) {
@@ -124,8 +154,16 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
     setNotice(`✅ „${r.name}“ gespeichert – du findest es jetzt in der Suche (📝).`);
   };
 
-  const toShopping = (items: { name: string; amount: string; store?: string }[], label: string) => {
-    addShopping(items.map((i) => ({ name: i.name, amount: i.amount, store: i.store ?? '' })));
+  const toShopping = (items: { name: string; amount: string; store?: string; price_eur?: number }[], label: string) => {
+    addShopping(
+      items.map((i) => ({
+        name: i.name,
+        amount: i.amount,
+        store: i.store ?? '',
+        price: i.price_eur && i.price_eur > 0 ? Math.round(i.price_eur * 100) / 100 : null,
+        estimated: !i.store,
+      })),
+    );
     setNotice(`✅ ${label} auf die Einkaufsliste gesetzt.`);
   };
 
@@ -136,6 +174,17 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
         <Text style={styles.muted}>
           Heute noch übrig: <Text style={styles.strong}>{kcalLeft} kcal</Text> · {Math.round(proteinLeft)} g Eiweiß
         </Text>
+        <Text style={[styles.label, { marginTop: 12 }]}>Ernährung (wird immer eingehalten)</Text>
+        <View style={styles.chips}>
+          {DIET.map((d) => {
+            const on = dietRules.includes(d);
+            return (
+              <Pressable key={d} onPress={() => toggleDiet(d)} style={[styles.chip, on && styles.chipDiet]}>
+                <Text style={[styles.chipText, on && { color: '#fff' }]}>{on ? '✓ ' : ''}{d}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
         <Text style={[styles.label, { marginTop: 12 }]}>Vorlieben (mehrere möglich)</Text>
         <View style={styles.chips}>
           {PREFS.map((p) => {
@@ -149,6 +198,16 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
         </View>
         <View style={{ height: 12 }} />
         <Field label="Was hast du daheim? (optional)" value={pantry} onChangeText={setPantry} placeholder="z. B. Eier, Spinat, Feta, Erdäpfel" />
+        <View style={{ height: 12 }} />
+        <Field
+          label="Budget pro Portion (optional)"
+          suffix="€"
+          value={perServingText}
+          onChangeText={setPerServingText}
+          onBlur={() => commitBudget('perServing', perServingText)}
+          keyboardType="decimal-pad"
+          placeholder="z. B. 3"
+        />
         {offers.length > 0 && (
           <Pressable onPress={() => setUseOffers(!useOffers)} style={styles.checkRow}>
             <View style={[styles.box, useOffers && styles.boxOn]}>{useOffers && <Text style={styles.boxTick}>✓</Text>}</View>
@@ -161,6 +220,15 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
       <Card>
         <SectionTitle>Wochenplan + Einkaufsliste</SectionTitle>
         <Text style={styles.muted}>Abendessen für mehrere Tage (je 2 Portionen) – mit fertiger Einkaufsliste, bevorzugt aus deinen Angeboten.</Text>
+        <Field
+          label="Budget für den ganzen Einkauf (optional)"
+          suffix="€"
+          value={weeklyText}
+          onChangeText={setWeeklyText}
+          onBlur={() => commitBudget('weekly', weeklyText)}
+          keyboardType="decimal-pad"
+          placeholder="z. B. 40"
+        />
         <View style={{ marginVertical: 12 }}>
           <Chips
             options={[
@@ -200,6 +268,18 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
               <Text style={styles.text}>💡 {result.tip}</Text>
             </Card>
           )}
+          {result.mode === 'weekplan' && result.total_cost_eur > 0 && (
+            <Card>
+              <Text style={styles.text}>
+                💶 Einkauf ca. <Text style={styles.strong}>{euro(result.total_cost_eur)}</Text>
+                {budgets.weekly ? (
+                  <Text style={{ color: result.total_cost_eur > budgets.weekly ? colors.danger : colors.primary }}>
+                    {'  '}({result.total_cost_eur > budgets.weekly ? 'über' : 'im'} Budget von {euro(budgets.weekly)})
+                  </Text>
+                ) : null}
+              </Text>
+            </Card>
+          )}
           {result.mode === 'weekplan' && result.shopping_list.length > 0 && (
             <Button
               title={`🛒 Alle ${result.shopping_list.length} Zutaten auf die Einkaufsliste`}
@@ -234,6 +314,7 @@ function RecipeCard({ recipe: r, onLog, onSave, onShopping }: { recipe: RecipeSu
           <Text style={styles.metaPill}>🔥 {Math.round(r.kcal_per_serving)} kcal/Portion</Text>
           <Text style={styles.metaPill}>⏱️ {Math.round(r.minutes)} Min</Text>
           <Text style={styles.metaPill}>🥚 {Math.round(r.protein_per_serving)} g Eiweiß</Text>
+          {r.cost_per_serving_eur > 0 && <Text style={styles.metaPill}>💶 ca. {euro(r.cost_per_serving_eur)}/Portion</Text>}
         </View>
         {r.uses_offers.length > 0 && <Text style={styles.offerHint}>🏷️ Mit Angebot: {r.uses_offers.join(', ')}</Text>}
         <Text style={styles.toggle}>{open ? '▲ Weniger' : '▼ Zutaten & Zubereitung'}</Text>
@@ -244,6 +325,7 @@ function RecipeCard({ recipe: r, onLog, onSave, onShopping }: { recipe: RecipeSu
           {r.ingredients.map((ing, i) => (
             <Text key={i} style={styles.text}>
               • {ing.amount} {ing.name}
+              {ing.price_eur > 0 ? <Text style={styles.muted}>{'  '}~{euro(ing.price_eur)}</Text> : null}
             </Text>
           ))}
           <Text style={[styles.label, { marginTop: 12 }]}>Zubereitung</Text>
@@ -390,7 +472,7 @@ function OffersSection() {
                 <Pressable
                   hitSlop={8}
                   accessibilityLabel={`${o.product} auf die Einkaufsliste`}
-                  onPress={() => addShopping([{ name: o.product, amount: '', store: o.store }])}
+                  onPress={() => addShopping([{ name: o.product, amount: '', store: o.store, price: parseEuro(o.price), estimated: false }])}
                   style={styles.iconBtn}
                 >
                   <Text>🛒</Text>
@@ -410,19 +492,32 @@ function OffersSection() {
 /* ───────────────────────── Einkaufsliste ───────────────────────── */
 
 function ShoppingSection() {
-  const { shopping, addShopping, toggleShopping, removeShopping, clearCheckedShopping } = useStore();
+  const { shopping, budgets, addShopping, updateShopping, toggleShopping, removeShopping, clearCheckedShopping } = useStore();
   const [name, setName] = useState('');
+  const [priceText, setPriceText] = useState('');
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const open = shopping.filter((i) => !i.checked);
   const done = shopping.filter((i) => i.checked);
+  const sum = (list: typeof shopping) => list.reduce((s, i) => s + (i.price ?? 0), 0);
+  const openSum = sum(open);
+  const total = sum(shopping);
+  const unpriced = open.filter((i) => i.price == null).length;
+  const anyEstimated = shopping.some((i) => i.price != null && i.estimated);
 
   const add = () => {
     if (!name.trim()) return;
-    addShopping([{ name: name.trim(), amount: '', store: '' }]);
+    const p = parseNum(priceText);
+    addShopping([{ name: name.trim(), amount: '', store: '', price: p > 0 ? Math.round(p * 100) / 100 : null, estimated: false }]);
     setName('');
+    setPriceText('');
   };
 
   const shareList = async () => {
-    const text = ['🛒 Einkaufsliste', ...open.map((i) => `☐ ${i.amount ? `${i.amount} ` : ''}${i.name}${i.store ? ` (${i.store})` : ''}`)].join('\n');
+    const text = [
+      '🛒 Einkaufsliste',
+      ...open.map((i) => `☐ ${i.amount ? `${i.amount} ` : ''}${i.name}${i.store ? ` (${i.store})` : ''}${i.price != null ? ` – ${euro(i.price)}` : ''}`),
+      ...(openSum > 0 ? [`Summe: ca. ${euro(openSum)}`] : []),
+    ].join('\n');
     if (Platform.OS === 'web') {
       if (typeof navigator.share === 'function') {
         try {
@@ -450,6 +545,33 @@ function ShoppingSection() {
           {!!item.store && <Text style={styles.muted}>🏷️ {item.store}</Text>}
         </View>
       </Pressable>
+      {editing?.id === item.id ? (
+        <View style={{ width: 92 }}>
+          <Field
+            label=""
+            suffix="€"
+            value={editing.text}
+            autoFocus
+            onChangeText={(t) => setEditing({ id: item.id, text: t })}
+            onBlur={() => {
+              const n = parseNum(editing.text);
+              updateShopping(item.id, { price: n > 0 ? Math.round(n * 100) / 100 : null, estimated: false });
+              setEditing(null);
+            }}
+            keyboardType="decimal-pad"
+          />
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => setEditing({ id: item.id, text: item.price != null ? String(item.price).replace('.', ',') : '' })}
+          accessibilityLabel={`Preis für ${item.name} ändern`}
+          style={styles.priceBtn}
+        >
+          <Text style={[styles.shopPrice, item.price == null && { color: colors.muted }, item.checked && styles.strike]}>
+            {item.price != null ? `${item.estimated ? '~' : ''}${euro(item.price)}` : '+ €'}
+          </Text>
+        </Pressable>
+      )}
       <Pressable hitSlop={8} onPress={() => removeShopping(item.id)} style={styles.iconBtn} accessibilityLabel={`${item.name} entfernen`}>
         <Text style={{ color: colors.muted }}>✕</Text>
       </Pressable>
@@ -462,6 +584,9 @@ function ShoppingSection() {
         <View style={styles.addRow}>
           <View style={{ flex: 1 }}>
             <Field label="Artikel hinzufügen" value={name} onChangeText={setName} placeholder="z. B. Milch" onSubmitEditing={add} returnKeyType="done" />
+          </View>
+          <View style={{ width: 90, marginLeft: 8 }}>
+            <Field label="Preis" suffix="€" value={priceText} onChangeText={setPriceText} keyboardType="decimal-pad" placeholder="opt." />
           </View>
           <Button title="+" accessibilityLabel="Artikel zur Einkaufsliste hinzufügen" onPress={add} disabled={!name.trim()} style={{ marginLeft: 10, paddingHorizontal: 18 }} />
         </View>
@@ -482,6 +607,34 @@ function ShoppingSection() {
         {open.map((i) => (
           <Row key={i.id} item={i} />
         ))}
+        {shopping.length > 0 && (
+          <View style={styles.sumBox}>
+            <View style={styles.sumRow}>
+              <Text style={styles.text}>Noch zu kaufen</Text>
+              <Text style={styles.sumValue}>{euro(openSum)}</Text>
+            </View>
+            {done.length > 0 && (
+              <View style={styles.sumRow}>
+                <Text style={styles.muted}>Gesamt inkl. erledigt</Text>
+                <Text style={styles.muted}>{euro(total)}</Text>
+              </View>
+            )}
+            {budgets.weekly ? (
+              <View style={styles.sumRow}>
+                <Text style={styles.muted}>Budget</Text>
+                <Text style={[styles.strong, { color: total > budgets.weekly ? colors.danger : colors.primary }]}>
+                  {total > budgets.weekly ? `${euro(total - budgets.weekly)} drüber` : `${euro(budgets.weekly - total)} übrig`} (von {euro(budgets.weekly)})
+                </Text>
+              </View>
+            ) : null}
+            {(unpriced > 0 || anyEstimated) && (
+              <Text style={[styles.muted, { marginTop: 4 }]}>
+                {unpriced > 0 ? `${unpriced} Artikel ohne Preis. ` : ''}
+                {anyEstimated ? '~ = von der KI geschätzt. ' : ''}Tippe auf einen Preis, um ihn zu ändern.
+              </Text>
+            )}
+          </View>
+        )}
       </Card>
 
       {done.length > 0 && (
@@ -514,6 +667,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipDiet: { backgroundColor: colors.protein, borderColor: colors.protein },
   chipText: { fontSize: 14, color: colors.text },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
@@ -540,4 +694,9 @@ const styles = StyleSheet.create({
   shopRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   shopMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   strike: { textDecorationLine: 'line-through', color: colors.muted },
+  priceBtn: { paddingHorizontal: 6, paddingVertical: 4, minWidth: 64, alignItems: 'flex-end' },
+  shopPrice: { fontSize: 15, fontWeight: '700', color: colors.text },
+  sumBox: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 },
+  sumRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sumValue: { fontSize: 18, fontWeight: '800', color: colors.primary },
 });

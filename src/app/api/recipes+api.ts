@@ -11,6 +11,7 @@ import { apiErrorResponse, FALLBACK, getClient, json, MODEL } from '../../server
 const Ingredient = z.object({
   name: z.string().describe('Zutat auf Deutsch, z. B. "Hühnerbrust"'),
   amount: z.string().describe('Menge für das ganze Rezept, z. B. "300 g", "2 Stück", "1 EL"'),
+  price_eur: z.number().describe('Geschätzter Einkaufspreis in Euro für die übliche Packung im österreichischen Supermarkt (Angebotspreis, falls passend); 0 für Basics wie Salz/Pfeffer/Öl'),
 });
 
 const Recipe = z.object({
@@ -23,6 +24,7 @@ const Recipe = z.object({
   protein_per_serving: z.number().describe('Eiweiß in g pro Portion'),
   carbs_per_serving: z.number().describe('Kohlenhydrate in g pro Portion'),
   fat_per_serving: z.number().describe('Fett in g pro Portion'),
+  cost_per_serving_eur: z.number().describe('Geschätzte Kosten pro Portion in Euro (anteilig verbrauchte Zutaten)'),
   ingredients: z.array(Ingredient),
   steps: z.array(z.string()).describe('Zubereitungsschritte, kurz und klar'),
   uses_offers: z.array(z.string()).describe('Namen der verwendeten Angebote aus der Liste (leer, wenn keine)'),
@@ -33,12 +35,14 @@ const ShoppingItem = z.object({
   name: z.string(),
   amount: z.string().describe('Gesamtmenge für alle Rezepte'),
   store: z.string().describe('Markt, wenn es ein passendes Angebot gibt (z. B. "BILLA"), sonst leer'),
+  price_eur: z.number().describe('Preis in Euro für die einzukaufende Packungsmenge (Angebotspreis, falls vorhanden, sonst übliche österreichische Supermarktpreise)'),
 });
 
 const Result = z.object({
   recipes: z.array(Recipe),
   shopping_list: z.array(ShoppingItem).describe('Beim Wochenplan: zusammengefasste Einkaufsliste; sonst leer'),
   tip: z.string().describe('Ein kurzer Hinweis auf Deutsch (max. 2 Sätze)'),
+  total_cost_eur: z.number().describe('Beim Wochenplan: geschätzte Summe der Einkaufsliste in Euro; sonst 0'),
 });
 
 type Offer = { product: string; price: string; store: string };
@@ -49,6 +53,8 @@ const SYSTEM = `Du bist eine kreative, alltagstaugliche Köchin und Ernährungsb
 - Kalorien und Nährwerte pro Portion realistisch berechnen.
 - Wenn Angebote aus Flugblättern angegeben sind, nutze sie bevorzugt, aber nur, wenn sie sinnvoll passen.
 - Wenn Vorräte angegeben sind, nutze sie möglichst und ergänze nur wenige Zutaten.
+- Ernährungsregeln sind STRIKT einzuhalten – auch versteckte Zutaten beachten (z. B. kein Schwein heißt auch kein Speck, Schinken, Schmalz, Gelatine aus Schwein; vegan heißt auch kein Honig, keine Butter, kein Ei).
+- Preise realistisch für österreichische Supermärkte (Stand heute) schätzen; ein Budget ist eine Obergrenze und muss eingehalten werden.
 - Antworte immer auf Deutsch.`;
 
 export async function POST(request: Request) {
@@ -64,6 +70,9 @@ export async function POST(request: Request) {
     pantry?: string;
     offers?: Offer[];
     days?: number;
+    diet?: string[];
+    budgetPerServing?: number | null;
+    budgetWeekly?: number | null;
   };
   try {
     body = await request.json();
@@ -76,6 +85,9 @@ export async function POST(request: Request) {
   const prefs = (body.preferences ?? []).filter((p) => typeof p === 'string').slice(0, 10);
   const pantry = typeof body.pantry === 'string' ? body.pantry.slice(0, 500) : '';
   const offers = (Array.isArray(body.offers) ? body.offers : []).slice(0, 60);
+  const diet = (body.diet ?? []).filter((d) => typeof d === 'string').slice(0, 10);
+  const budgetPerServing = typeof body.budgetPerServing === 'number' && body.budgetPerServing > 0 ? body.budgetPerServing : null;
+  const budgetWeekly = typeof body.budgetWeekly === 'number' && body.budgetWeekly > 0 ? body.budgetWeekly : null;
 
   const lines: string[] = [];
   if (weekplan) {
@@ -90,6 +102,9 @@ export async function POST(request: Request) {
       'shopping_list leer lassen.',
     );
   }
+  if (diet.length) lines.push(`VERBINDLICHE Ernährungsregeln: ${diet.join(', ')}.`);
+  if (weekplan && budgetWeekly) lines.push(`Budget: Die gesamte Einkaufsliste darf höchstens ${budgetWeekly.toFixed(2)} € kosten.`);
+  if (!weekplan && budgetPerServing) lines.push(`Budget: höchstens ${budgetPerServing.toFixed(2)} € pro Portion.`);
   if (prefs.length) lines.push(`Vorlieben: ${prefs.join(', ')}.`);
   if (pantry) lines.push(`Vorhanden zu Hause: ${pantry}`);
   if (offers.length) {

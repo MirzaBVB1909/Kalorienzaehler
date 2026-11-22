@@ -108,7 +108,8 @@ export type RecipeSuggestion = {
   protein_per_serving: number;
   carbs_per_serving: number;
   fat_per_serving: number;
-  ingredients: { name: string; amount: string }[];
+  ingredients: { name: string; amount: string; price_eur: number }[];
+  cost_per_serving_eur: number;
   steps: string[];
   uses_offers: string[];
   day: string;
@@ -116,8 +117,9 @@ export type RecipeSuggestion = {
 
 export type RecipeResult = {
   recipes: RecipeSuggestion[];
-  shopping_list: { name: string; amount: string; store: string }[];
+  shopping_list: { name: string; amount: string; store: string; price_eur: number }[];
   tip: string;
+  total_cost_eur: number;
 };
 
 export function suggestRecipes(input: {
@@ -129,6 +131,9 @@ export function suggestRecipes(input: {
   pantry: string;
   offers: { product: string; price: string; store: string }[];
   days?: number;
+  diet: string[];
+  budgetPerServing: number | null;
+  budgetWeekly: number | null;
 }): Promise<RecipeResult> {
   return post<RecipeResult>('/api/recipes', input);
 }

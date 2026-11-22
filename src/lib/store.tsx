@@ -17,7 +17,9 @@ export type Entry = Macros & {
 
 export type WeightLog = { date: string; kg: number };
 
-export type ShoppingItem = { id: string; name: string; amount: string; store: string; checked: boolean };
+/** price: Preis in € (aus Angebot oder geschätzt), null = unbekannt. */
+export type ShoppingItem = { id: string; name: string; amount: string; store: string; checked: boolean; price?: number | null; estimated?: boolean };
+export type Budgets = { perServing: number | null; weekly: number | null };
 export type Offer = { id: string; product: string; price: string; store: string; valid: string; category: string; addedAt: number };
 
 export type State = {
@@ -33,6 +35,9 @@ export type State = {
   offers: Offer[];
   /** Vorlieben für Rezeptvorschläge (z. B. "Österreichisch", "Schnell"). */
   recipePrefs: string[];
+  /** Verbindliche Ernährungsregeln (z. B. "Kein Schweinefleisch", "Vegan"). */
+  dietRules: string[];
+  budgets: Budgets;
 };
 
 type Store = State & {
@@ -52,6 +57,7 @@ type Store = State & {
   addWater: (date: string, ml: number) => void;
   logWeight: (kg: number) => void;
   addShopping: (items: Omit<ShoppingItem, 'id' | 'checked'>[]) => void;
+  updateShopping: (id: string, changes: Partial<Omit<ShoppingItem, 'id'>>) => void;
   toggleShopping: (id: string) => void;
   removeShopping: (id: string) => void;
   clearCheckedShopping: () => void;
@@ -59,6 +65,8 @@ type Store = State & {
   removeOffer: (id: string) => void;
   clearOffers: () => void;
   setRecipePrefs: (prefs: string[]) => void;
+  setDietRules: (rules: string[]) => void;
+  setBudgets: (b: Partial<Budgets>) => void;
   /** Ersetzt alle Daten (Wiederherstellen aus einer Sicherung). */
   replaceAll: (s: State) => void;
   resetAll: () => void;
@@ -76,6 +84,8 @@ const INITIAL: State = {
   shopping: [],
   offers: [],
   recipePrefs: [],
+  dietRules: [],
+  budgets: { perServing: null, weekly: null },
 };
 
 /** Ergänzt fehlende Felder (ältere Speicherstände, Sicherungsdateien). */
@@ -91,6 +101,8 @@ export function normalizeState(parsed: Partial<State>): State {
     shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
     offers: Array.isArray(parsed.offers) ? parsed.offers : [],
     recipePrefs: Array.isArray(parsed.recipePrefs) ? parsed.recipePrefs : [],
+    dietRules: Array.isArray(parsed.dietRules) ? parsed.dietRules : [],
+    budgets: { perServing: null, weekly: null, ...(parsed.budgets ?? {}) },
     profile: { ...DEFAULT_PROFILE, ...parsed.profile },
   };
 }
@@ -194,6 +206,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return { ...s, shopping: [...s.shopping, ...fresh] };
     });
   }, []);
+  const updateShopping = useCallback((id: string, changes: Partial<Omit<ShoppingItem, 'id'>>) => {
+    setState((s) => ({ ...s, shopping: s.shopping.map((i) => (i.id === id ? { ...i, ...changes } : i)) }));
+  }, []);
   const toggleShopping = useCallback((id: string) => {
     setState((s) => ({ ...s, shopping: s.shopping.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) }));
   }, []);
@@ -212,6 +227,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
   const clearOffers = useCallback(() => setState((s) => ({ ...s, offers: [] })), []);
   const setRecipePrefs = useCallback((prefs: string[]) => setState((s) => ({ ...s, recipePrefs: prefs })), []);
+  const setDietRules = useCallback((rules: string[]) => setState((s) => ({ ...s, dietRules: rules })), []);
+  const setBudgets = useCallback((b: Partial<Budgets>) => setState((s) => ({ ...s, budgets: { ...s.budgets, ...b } })), []);
 
   const replaceAll = useCallback((next: State) => setState(normalizeState(next)), []);
   const resetAll = useCallback(() => setState(INITIAL), []);
@@ -233,6 +250,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addWater,
       logWeight,
       addShopping,
+      updateShopping,
       toggleShopping,
       removeShopping,
       clearCheckedShopping,
@@ -240,6 +258,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeOffer,
       clearOffers,
       setRecipePrefs,
+      setDietRules,
+      setBudgets,
       replaceAll,
       resetAll,
     }),
@@ -258,6 +278,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addWater,
       logWeight,
       addShopping,
+      updateShopping,
       toggleShopping,
       removeShopping,
       clearCheckedShopping,
@@ -265,6 +286,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeOffer,
       clearOffers,
       setRecipePrefs,
+      setDietRules,
+      setBudgets,
       replaceAll,
       resetAll,
     ],

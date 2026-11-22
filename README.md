@@ -18,7 +18,8 @@ Eine Kalorienzähler-App mit [Expo](https://expo.dev) (SDK 58), Expo Router und 
 - **Wasser-Tracker** mit Tagesziel
 - **Planer (KI):** Rezeptvorschläge passend zu den restlichen Kalorien, Vorlieben und Vorräten; Wochenplan mit Einkaufsliste
 - **Angebote:** Links zu den Flugblättern österreichischer Märkte; Flugblattseiten per Foto/Screenshot auslesen und bei Rezepten berücksichtigen
-- **Einkaufsliste** zum Abhaken und Teilen
+- **Einkaufsliste** zum Abhaken und Teilen, mit Preisen (aus Angeboten oder geschätzt), Summe und Budget
+- **Ernährungsregeln** (z. B. kein Schweinefleisch, halal, vegetarisch, vegan) und **Budgetlimit** für Rezepte und Wochenplan
 - **Verlauf:** Balkendiagramm für 7 oder 30 Tage, Wochenrückblick mit Tipps, Gewichtsdiagramm mit Zielgewicht
 - **Export & Sicherung:** komplette Sicherung als Datei (wiederherstellbar) und Tagebuch als Excel/CSV-Tabelle
 - **Dunkelmodus** (automatisch oder manuell)
