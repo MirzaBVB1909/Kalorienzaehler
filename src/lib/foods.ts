@@ -85,6 +85,101 @@ export const FOODS: Food[] = [
   { id: 'gummibaerchen', name: 'Gummibärchen', kcal: 343, protein: 6.9, carbs: 77, fat: 0.1, portion: 50 },
   { id: 'croissant', name: 'Croissant', kcal: 406, protein: 8, carbs: 46, fat: 21, portion: 60, portionLabel: '1 Stück' },
   { id: 'nutella', name: 'Nuss-Nougat-Creme', kcal: 539, protein: 6.3, carbs: 57, fat: 31, portion: 15, portionLabel: '1 Portion' },
+  // Österreichische Küche
+  { id: 'wiener-schnitzel', name: 'Wiener Schnitzel (Kalb, paniert)', kcal: 230, protein: 18, carbs: 12, fat: 12, portion: 200, portionLabel: '1 Schnitzel' },
+  { id: 'schnitzel-schwein', name: 'Schnitzel vom Schwein (paniert)', kcal: 250, protein: 17, carbs: 13, fat: 14, portion: 200, portionLabel: '1 Schnitzel' },
+  { id: 'backhendl', name: 'Backhendl', kcal: 240, protein: 19, carbs: 10, fat: 14, portion: 250, portionLabel: '1 Portion' },
+  { id: 'cordon-bleu', name: 'Cordon bleu', kcal: 260, protein: 18, carbs: 12, fat: 15, portion: 250, portionLabel: '1 Stück' },
+  { id: 'tafelspitz', name: 'Tafelspitz', kcal: 150, protein: 26, carbs: 0, fat: 5, portion: 200, portionLabel: '1 Portion' },
+  { id: 'schweinsbraten', name: 'Schweinsbraten', kcal: 240, protein: 22, carbs: 0, fat: 17, portion: 200, portionLabel: '1 Portion' },
+  { id: 'gulasch', name: 'Rindsgulasch', kcal: 130, protein: 12, carbs: 4, fat: 7, portion: 300, portionLabel: '1 Teller' },
+  { id: 'tiroler-groestl', name: 'Tiroler Gröstl', kcal: 160, protein: 7, carbs: 14, fat: 8, portion: 350, portionLabel: '1 Teller' },
+  { id: 'kasnocken', name: 'Kasnocken / Käsespätzle', kcal: 230, protein: 9, carbs: 25, fat: 11, portion: 350, portionLabel: '1 Teller' },
+  { id: 'kasnudeln', name: 'Kärntner Kasnudeln', kcal: 210, protein: 8, carbs: 28, fat: 7, portion: 300, portionLabel: '1 Portion' },
+  { id: 'semmelknoedel', name: 'Semmelknödel', kcal: 190, protein: 6, carbs: 30, fat: 5, portion: 100, portionLabel: '1 Knödel' },
+  { id: 'erdaepfelknoedel', name: 'Erdäpfelknödel (Kartoffelknödel)', kcal: 120, protein: 2.5, carbs: 25, fat: 1, portion: 100, portionLabel: '1 Knödel' },
+  { id: 'speckknoedel', name: 'Speckknödel', kcal: 220, protein: 8, carbs: 25, fat: 10, portion: 100, portionLabel: '1 Knödel' },
+  { id: 'leberkaese', name: 'Leberkäse', kcal: 290, protein: 12, carbs: 2, fat: 26, portion: 100, portionLabel: '1 Scheibe' },
+  { id: 'leberkaessemmel', name: 'Leberkässemmel', kcal: 270, protein: 10, carbs: 22, fat: 16, portion: 160, portionLabel: '1 Stück' },
+  { id: 'kaesekrainer', name: 'Käsekrainer', kcal: 300, protein: 13, carbs: 2, fat: 27, portion: 120, portionLabel: '1 Stück' },
+  { id: 'frankfurter', name: 'Frankfurter Würstel', kcal: 290, protein: 13, carbs: 1, fat: 26, portion: 100, portionLabel: '1 Paar' },
+  { id: 'kuerbissuppe', name: 'Kürbissuppe (Kürbiscremesuppe)', kcal: 55, protein: 1.2, carbs: 6, fat: 3, portion: 300, portionLabel: '1 Teller' },
+  { id: 'frittatensuppe', name: 'Frittatensuppe', kcal: 45, protein: 2, carbs: 4, fat: 2, portion: 300, portionLabel: '1 Teller' },
+  { id: 'leberknoedelsuppe', name: 'Leberknödelsuppe', kcal: 55, protein: 3, carbs: 4, fat: 3, portion: 350, portionLabel: '1 Teller' },
+  { id: 'griessnockerlsuppe', name: 'Grießnockerlsuppe', kcal: 50, protein: 2, carbs: 5, fat: 2.5, portion: 300, portionLabel: '1 Teller' },
+  { id: 'gulaschsuppe', name: 'Gulaschsuppe', kcal: 75, protein: 5, carbs: 5, fat: 4, portion: 350, portionLabel: '1 Teller' },
+  { id: 'erdaepfelsalat', name: 'Erdäpfelsalat (Kartoffelsalat)', kcal: 120, protein: 2, carbs: 15, fat: 6, portion: 200, portionLabel: '1 Portion' },
+  { id: 'krautsalat', name: 'Krautsalat', kcal: 60, protein: 1.2, carbs: 6, fat: 3.5, portion: 150, portionLabel: '1 Portion' },
+  { id: 'liptauer', name: 'Liptauer', kcal: 250, protein: 9, carbs: 4, fat: 22, portion: 30, portionLabel: '1 Portion' },
+  { id: 'kaisersemmel', name: 'Kaisersemmel', kcal: 285, protein: 9, carbs: 56, fat: 2, portion: 55, portionLabel: '1 Stück' },
+  { id: 'kornspitz', name: 'Kornspitz', kcal: 290, protein: 10, carbs: 48, fat: 6, portion: 60, portionLabel: '1 Stück' },
+  { id: 'topfen', name: 'Topfen 20 %', kcal: 110, protein: 12, carbs: 3, fat: 5, portion: 250, portionLabel: '1 Becher' },
+  { id: 'kaiserschmarrn', name: 'Kaiserschmarrn', kcal: 230, protein: 7, carbs: 30, fat: 9, portion: 300, portionLabel: '1 Portion' },
+  { id: 'apfelstrudel', name: 'Apfelstrudel', kcal: 230, protein: 3, carbs: 32, fat: 10, portion: 150, portionLabel: '1 Stück' },
+  { id: 'topfenstrudel', name: 'Topfenstrudel', kcal: 230, protein: 7, carbs: 28, fat: 10, portion: 150, portionLabel: '1 Stück' },
+  { id: 'sachertorte', name: 'Sachertorte', kcal: 370, protein: 5, carbs: 45, fat: 19, portion: 100, portionLabel: '1 Stück' },
+  { id: 'linzer-torte', name: 'Linzer Torte', kcal: 410, protein: 6, carbs: 52, fat: 20, portion: 100, portionLabel: '1 Stück' },
+  { id: 'germknoedel', name: 'Germknödel', kcal: 260, protein: 6, carbs: 42, fat: 7, portion: 200, portionLabel: '1 Knödel' },
+  { id: 'marillenknoedel', name: 'Marillenknödel', kcal: 200, protein: 5, carbs: 33, fat: 5, portion: 70, portionLabel: '1 Knödel' },
+  { id: 'palatschinken', name: 'Palatschinken (mit Marmelade)', kcal: 220, protein: 6, carbs: 32, fat: 7, portion: 120, portionLabel: '1 Stück' },
+  // Türkische Küche
+  { id: 'duerum', name: 'Dürüm Döner', kcal: 220, protein: 12, carbs: 22, fat: 9, portion: 400, portionLabel: '1 Stück' },
+  { id: 'lahmacun', name: 'Lahmacun', kcal: 200, protein: 9, carbs: 30, fat: 5, portion: 180, portionLabel: '1 Stück' },
+  { id: 'pide-kaese', name: 'Pide mit Käse', kcal: 270, protein: 11, carbs: 35, fat: 10, portion: 300, portionLabel: '1 Stück' },
+  { id: 'pide-hack', name: 'Pide mit Hackfleisch', kcal: 250, protein: 12, carbs: 32, fat: 8, portion: 300, portionLabel: '1 Stück' },
+  { id: 'koefte', name: 'Köfte', kcal: 240, protein: 17, carbs: 5, fat: 17, portion: 150, portionLabel: '1 Portion' },
+  { id: 'adana', name: 'Adana Kebap', kcal: 260, protein: 17, carbs: 3, fat: 20, portion: 200, portionLabel: '1 Portion' },
+  { id: 'boerek-kaese', name: 'Börek mit Käse', kcal: 300, protein: 9, carbs: 28, fat: 17, portion: 150, portionLabel: '1 Stück' },
+  { id: 'boerek-spinat', name: 'Börek mit Spinat', kcal: 250, protein: 7, carbs: 26, fat: 13, portion: 150, portionLabel: '1 Stück' },
+  { id: 'goezleme', name: 'Gözleme', kcal: 230, protein: 9, carbs: 30, fat: 8, portion: 250, portionLabel: '1 Stück' },
+  { id: 'manti', name: 'Mantı', kcal: 200, protein: 9, carbs: 25, fat: 7, portion: 300, portionLabel: '1 Teller' },
+  { id: 'linsensuppe', name: 'Linsensuppe (Mercimek)', kcal: 60, protein: 3.5, carbs: 9, fat: 1.2, portion: 350, portionLabel: '1 Teller' },
+  { id: 'menemen', name: 'Menemen', kcal: 110, protein: 5, carbs: 5, fat: 8, portion: 250, portionLabel: '1 Portion' },
+  { id: 'sucuk', name: 'Sucuk', kcal: 330, protein: 18, carbs: 2, fat: 28, portion: 50, portionLabel: '1 Portion' },
+  { id: 'imam-bayildi', name: 'İmam bayıldı (gefüllte Melanzani)', kcal: 110, protein: 1.5, carbs: 8, fat: 8, portion: 250, portionLabel: '1 Portion' },
+  { id: 'dolma', name: 'Dolma (gefüllte Weinblätter)', kcal: 160, protein: 3, carbs: 20, fat: 8, portion: 100, portionLabel: '5 Stück' },
+  { id: 'cig-koefte', name: 'Çiğ Köfte', kcal: 170, protein: 4, carbs: 34, fat: 2, portion: 150, portionLabel: '1 Portion' },
+  { id: 'falafel', name: 'Falafel', kcal: 330, protein: 13, carbs: 32, fat: 18, portion: 100, portionLabel: '5 Stück' },
+  { id: 'hummus', name: 'Hummus', kcal: 170, protein: 8, carbs: 14, fat: 10, portion: 50, portionLabel: '1 Portion' },
+  { id: 'cacik', name: 'Cacık / Zaziki', kcal: 70, protein: 3.5, carbs: 4, fat: 4.5, portion: 100, portionLabel: '1 Portion' },
+  { id: 'bulgur-pilav', name: 'Bulgur-Pilav', kcal: 140, protein: 3.5, carbs: 24, fat: 3.5, portion: 200, portionLabel: '1 Portion' },
+  { id: 'reis-pilav', name: 'Reis-Pilav (Butterreis)', kcal: 150, protein: 3, carbs: 28, fat: 3, portion: 200, portionLabel: '1 Portion' },
+  { id: 'fladenbrot', name: 'Fladenbrot (Pide-Brot)', kcal: 260, protein: 8.5, carbs: 52, fat: 1.5, portion: 100, portionLabel: '1 Stück' },
+  { id: 'simit', name: 'Simit', kcal: 300, protein: 9, carbs: 55, fat: 5, portion: 100, portionLabel: '1 Stück' },
+  { id: 'baklava', name: 'Baklava', kcal: 430, protein: 6, carbs: 52, fat: 22, portion: 60, portionLabel: '2 Stück' },
+  { id: 'kuenefe', name: 'Künefe', kcal: 330, protein: 8, carbs: 40, fat: 16, portion: 150, portionLabel: '1 Portion' },
+  { id: 'ayran', name: 'Ayran', kcal: 37, protein: 1.7, carbs: 2.7, fat: 2, portion: 250, portionLabel: '1 Becher', unit: 'ml' },
+  { id: 'cay', name: 'Türkischer Tee (Çay)', kcal: 1, protein: 0, carbs: 0.2, fat: 0, portion: 100, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'cay-zucker', name: 'Türkischer Tee mit Zucker', kcal: 40, protein: 0, carbs: 10, fat: 0, portion: 100, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'tuerk-kaffee', name: 'Türkischer Kaffee', kcal: 5, protein: 0.2, carbs: 0.5, fat: 0.2, portion: 70, portionLabel: '1 Tasse', unit: 'ml' },
+  // Italienische Küche
+  { id: 'pizza-salami', name: 'Pizza Salami', kcal: 270, protein: 12, carbs: 30, fat: 11, portion: 350, portionLabel: '1 Pizza' },
+  { id: 'pizza-tonno', name: 'Pizza Tonno', kcal: 240, protein: 12, carbs: 28, fat: 9, portion: 350, portionLabel: '1 Pizza' },
+  { id: 'pizza-funghi', name: 'Pizza Funghi', kcal: 230, protein: 10, carbs: 30, fat: 8, portion: 350, portionLabel: '1 Pizza' },
+  { id: 'pizza-prosciutto', name: 'Pizza Prosciutto (Schinken)', kcal: 240, protein: 12, carbs: 29, fat: 8.5, portion: 350, portionLabel: '1 Pizza' },
+  { id: 'calzone', name: 'Calzone', kcal: 230, protein: 10, carbs: 28, fat: 9, portion: 400, portionLabel: '1 Stück' },
+  { id: 'spaghetti-bolognese', name: 'Spaghetti Bolognese', kcal: 140, protein: 7, carbs: 18, fat: 4.5, portion: 400, portionLabel: '1 Teller' },
+  { id: 'spaghetti-carbonara', name: 'Spaghetti Carbonara', kcal: 200, protein: 8, carbs: 22, fat: 9, portion: 400, portionLabel: '1 Teller' },
+  { id: 'aglio-olio', name: 'Spaghetti Aglio e Olio', kcal: 210, protein: 6, carbs: 30, fat: 8, portion: 350, portionLabel: '1 Teller' },
+  { id: 'arrabbiata', name: "Penne all'Arrabbiata", kcal: 140, protein: 4.5, carbs: 25, fat: 3, portion: 400, portionLabel: '1 Teller' },
+  { id: 'lasagne', name: 'Lasagne', kcal: 150, protein: 8, carbs: 13, fat: 7, portion: 400, portionLabel: '1 Portion' },
+  { id: 'cannelloni', name: 'Cannelloni', kcal: 150, protein: 7, carbs: 14, fat: 7, portion: 400, portionLabel: '1 Portion' },
+  { id: 'tortellini', name: 'Tortellini mit Käsefüllung (gekocht)', kcal: 180, protein: 8, carbs: 26, fat: 5, portion: 250, portionLabel: '1 Portion' },
+  { id: 'ravioli', name: 'Ravioli (gekocht)', kcal: 170, protein: 7, carbs: 24, fat: 5, portion: 250, portionLabel: '1 Portion' },
+  { id: 'gnocchi', name: 'Gnocchi (gekocht)', kcal: 130, protein: 3, carbs: 28, fat: 0.5, portion: 250, portionLabel: '1 Portion' },
+  { id: 'risotto', name: 'Risotto (mit Pilzen)', kcal: 140, protein: 3.5, carbs: 20, fat: 5, portion: 350, portionLabel: '1 Teller' },
+  { id: 'minestrone', name: 'Minestrone', kcal: 45, protein: 2, carbs: 7, fat: 1, portion: 350, portionLabel: '1 Teller' },
+  { id: 'bruschetta', name: 'Bruschetta', kcal: 190, protein: 5, carbs: 25, fat: 8, portion: 100, portionLabel: '2 Stück' },
+  { id: 'caprese', name: 'Insalata Caprese (Tomate-Mozzarella)', kcal: 180, protein: 10, carbs: 3, fat: 14, portion: 200, portionLabel: '1 Portion' },
+  { id: 'vitello-tonnato', name: 'Vitello tonnato', kcal: 180, protein: 18, carbs: 2, fat: 11, portion: 150, portionLabel: '1 Portion' },
+  { id: 'antipasti', name: 'Antipasti (Gemüse in Öl)', kcal: 120, protein: 1.5, carbs: 6, fat: 10, portion: 100, portionLabel: '1 Portion' },
+  { id: 'focaccia', name: 'Focaccia', kcal: 270, protein: 7, carbs: 38, fat: 10, portion: 100, portionLabel: '1 Stück' },
+  { id: 'parmesan', name: 'Parmesan', kcal: 390, protein: 35, carbs: 0, fat: 28, portion: 10, portionLabel: '1 EL gerieben' },
+  { id: 'prosciutto', name: 'Prosciutto (Rohschinken)', kcal: 250, protein: 26, carbs: 0, fat: 16, portion: 30, portionLabel: '2 Scheiben' },
+  { id: 'pesto', name: 'Pesto Genovese', kcal: 450, protein: 5, carbs: 5, fat: 45, portion: 15, portionLabel: '1 EL' },
+  { id: 'tiramisu', name: 'Tiramisu', kcal: 280, protein: 5, carbs: 28, fat: 16, portion: 150, portionLabel: '1 Portion' },
+  { id: 'panna-cotta', name: 'Panna cotta', kcal: 230, protein: 3, carbs: 22, fat: 14, portion: 120, portionLabel: '1 Portion' },
+  { id: 'gelato', name: 'Gelato / Speiseeis', kcal: 200, protein: 3.5, carbs: 25, fat: 10, portion: 100, portionLabel: '2 Kugeln' },
   // Getränke (Werte pro 100 ml)
   { id: 'wasser', name: 'Wasser', kcal: 0, protein: 0, carbs: 0, fat: 0, portion: 250, portionLabel: '1 Glas', unit: 'ml' },
   { id: 'mineralwasser', name: 'Mineralwasser (Sprudel)', kcal: 0, protein: 0, carbs: 0, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
@@ -121,15 +216,25 @@ export const FOODS: Food[] = [
   { id: 'olivenoel', name: 'Olivenöl', kcal: 884, protein: 0, carbs: 0, fat: 100, portion: 10, portionLabel: '1 EL' },
 ];
 
+/** Für die Suche: Kleinbuchstaben, ohne Akzente/Umlaute (ä→a, ç→c, ı→i), ß→ss. */
+function norm(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ß/g, 'ss')
+    .replace(/ı/g, 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 export function searchFoods(query: string, extra: Food[] = [], drinksOnly = false): Food[] {
   const all = [...extra, ...FOODS].filter((f) => !drinksOnly || isDrink(f));
-  const q = query.trim().toLowerCase();
+  const q = norm(query.trim());
   if (!q) return all;
   return all
-    .filter((f) => f.name.toLowerCase().includes(q))
+    .filter((f) => norm(f.name).includes(q))
     .sort((a, b) => {
-      const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
-      const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const aStarts = norm(a.name).startsWith(q) ? 0 : 1;
+      const bStarts = norm(b.name).startsWith(q) ? 0 : 1;
       return aStarts - bStarts || a.name.localeCompare(b.name, 'de');
     });
 }
