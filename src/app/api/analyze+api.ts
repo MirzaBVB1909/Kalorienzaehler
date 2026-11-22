@@ -7,8 +7,8 @@ import { z } from 'zod';
  * von Essen oder einem Nährwert-Etikett mit Claude und gibt Nährwerte als JSON zurück.
  *
  * Benötigte Umgebungsvariablen (auf expo.dev unter Projekt → Environment variables):
- *   ANTHROPIC_API_KEY  – API-Schlüssel von platform.claude.com (geheim!)
- *   APP_ACCESS_CODE    – frei gewählter Zugangscode, damit Fremde den Schlüssel nicht nutzen können
+ *   ANTHROPIC_API_KEY  – API-Schlüssel von platform.claude.com (Sichtbarkeit „Sensitive“)
+ * Kostenschutz: vorausbezahltes Guthaben ohne automatische Aufladung.
  */
 
 const FoodItem = z.object({
@@ -65,10 +65,6 @@ export async function POST(request: Request) {
   const apiKey = env('ANTHROPIC_API_KEY')?.trim();
   if (!apiKey) {
     return json({ error: 'not_configured', message: 'Die KI-Erkennung ist noch nicht eingerichtet (API-Schlüssel fehlt).' }, 503);
-  }
-  const expected = env('APP_ACCESS_CODE')?.trim();
-  if (expected && request.headers.get('x-app-code') !== expected) {
-    return json({ error: 'unauthorized', message: 'Falscher oder fehlender Zugangscode.' }, 401);
   }
 
   let body: { image?: string; mediaType?: string; mode?: string };

@@ -112,7 +112,7 @@ export default function PhotoPanel({
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
-      {!photo && !loading && !!code && (
+      {!photo && !loading && (
         <Card>
           <Text style={styles.title}>{mode === 'meal' ? '📸 Essen fotografieren' : '🏷️ Nährwert-Etikett fotografieren'}</Text>
           <Text style={styles.text}>
@@ -136,10 +136,10 @@ export default function PhotoPanel({
         </View>
       )}
 
-      {(needCode || (!code && !result)) && (
+      {needCode && (
         <Card>
           <Text style={styles.text}>
-            Bitte zuerst den Zugangscode für die KI-Erkennung eingeben (einmalig). Er wird nur auf diesem Gerät gespeichert.
+            Für die KI-Erkennung ist ein Zugangscode eingerichtet. Bitte einmalig eingeben – er wird nur auf diesem Gerät gespeichert.
           </Text>
           <Field label="Zugangscode" value={codeInput} onChangeText={setCodeInput} secureTextEntry autoCapitalize="none" />
           <Button title="Code speichern" variant="secondary" disabled={!codeInput.trim()} onPress={saveCode} style={{ marginTop: 10 }} />

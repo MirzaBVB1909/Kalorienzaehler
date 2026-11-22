@@ -60,7 +60,8 @@ Die Foto-Erkennung läuft über eine Server-Funktion (`src/app/api/analyze+api.t
 
 | Name | Sichtbarkeit | Wert |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Secret | API-Schlüssel von platform.claude.com |
-| `APP_ACCESS_CODE` | Secret | frei gewählter Code, den man in der App einmal eingibt |
+| `ANTHROPIC_API_KEY` | Sensitive | API-Schlüssel von platform.claude.com |
+
+Wichtig: Sichtbarkeit **Sensitive** (nicht *Secret* – Secrets erreichen den Web-Server nicht). Kostenschutz: vorausbezahltes Guthaben ohne automatische Aufladung.
 
 Danach neu veröffentlichen: `npx expo export --platform web && npx eas-cli@latest deploy --prod --environment production`
