@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import type { Food } from './foods';
+import type { Food, Unit } from './foods';
 import { DEFAULT_PROFILE, Macros, Meal, Profile, toDateKey } from './nutrition';
 
 export type Entry = Macros & {
@@ -9,7 +9,8 @@ export type Entry = Macros & {
   date: string; // YYYY-MM-DD
   meal: Meal;
   name: string;
-  grams: number | null; // null = Schnelleingabe ohne Menge
+  grams: number | null; // Menge in g bzw. ml; null = Schnelleingabe ohne Menge
+  unit?: Unit; // fehlt bei älteren Einträgen → 'g'
   foodId: string | null;
   createdAt: number;
 };

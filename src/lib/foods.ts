@@ -9,7 +9,19 @@ export type Food = {
   /** Typische Portion in Gramm, als Vorschlag beim Hinzufügen. */
   portion: number;
   portionLabel?: string;
+  /** Einheit der Menge: Gramm (Essen) oder Milliliter (Getränke). Standard: 'g'. */
+  unit?: Unit;
 };
+
+export type Unit = 'g' | 'ml';
+
+export function unitOf(f: { unit?: Unit }): Unit {
+  return f.unit ?? 'g';
+}
+
+export function isDrink(f: { unit?: Unit }): boolean {
+  return unitOf(f) === 'ml';
+}
 
 export const FOODS: Food[] = [
   // Obst
@@ -40,7 +52,7 @@ export const FOODS: Food[] = [
   { id: 'muesli', name: 'Müsli', kcal: 360, protein: 9, carbs: 62, fat: 6.5, portion: 60 },
   { id: 'cornflakes', name: 'Cornflakes', kcal: 357, protein: 7.5, carbs: 84, fat: 0.4, portion: 30 },
   // Milchprodukte & Eier
-  { id: 'milch', name: 'Milch 1,5 %', kcal: 47, protein: 3.4, carbs: 4.8, fat: 1.5, portion: 250, portionLabel: '1 Glas' },
+  { id: 'milch', name: 'Milch 1,5 %', kcal: 47, protein: 3.4, carbs: 4.8, fat: 1.5, portion: 250, portionLabel: '1 Glas', unit: 'ml' },
   { id: 'joghurt', name: 'Naturjoghurt 3,5 %', kcal: 66, protein: 3.8, carbs: 4.5, fat: 3.5, portion: 150 },
   { id: 'skyr', name: 'Skyr', kcal: 63, protein: 11, carbs: 4, fat: 0.2, portion: 150 },
   { id: 'magerquark', name: 'Magerquark', kcal: 67, protein: 12, carbs: 4, fat: 0.3, portion: 250 },
@@ -73,17 +85,44 @@ export const FOODS: Food[] = [
   { id: 'gummibaerchen', name: 'Gummibärchen', kcal: 343, protein: 6.9, carbs: 77, fat: 0.1, portion: 50 },
   { id: 'croissant', name: 'Croissant', kcal: 406, protein: 8, carbs: 46, fat: 21, portion: 60, portionLabel: '1 Stück' },
   { id: 'nutella', name: 'Nuss-Nougat-Creme', kcal: 539, protein: 6.3, carbs: 57, fat: 31, portion: 15, portionLabel: '1 Portion' },
-  // Getränke
-  { id: 'cola', name: 'Cola', kcal: 42, protein: 0, carbs: 10.6, fat: 0, portion: 330, portionLabel: '1 Dose' },
-  { id: 'orangensaft', name: 'Orangensaft', kcal: 45, protein: 0.7, carbs: 10, fat: 0.2, portion: 200, portionLabel: '1 Glas' },
-  { id: 'bier', name: 'Bier', kcal: 43, protein: 0.5, carbs: 3.6, fat: 0, portion: 500, portionLabel: '1 Flasche' },
-  { id: 'wein', name: 'Rotwein', kcal: 85, protein: 0.1, carbs: 2.6, fat: 0, portion: 200, portionLabel: '1 Glas' },
-  { id: 'cappuccino', name: 'Cappuccino', kcal: 36, protein: 2, carbs: 3, fat: 1.8, portion: 200, portionLabel: '1 Tasse' },
+  // Getränke (Werte pro 100 ml)
+  { id: 'wasser', name: 'Wasser', kcal: 0, protein: 0, carbs: 0, fat: 0, portion: 250, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'mineralwasser', name: 'Mineralwasser (Sprudel)', kcal: 0, protein: 0, carbs: 0, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'kaffee', name: 'Kaffee schwarz', kcal: 2, protein: 0.1, carbs: 0, fat: 0, portion: 200, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'kaffee-milch', name: 'Kaffee mit Milch', kcal: 15, protein: 0.8, carbs: 1.2, fat: 0.7, portion: 200, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'kaffee-milch-zucker', name: 'Kaffee mit Milch und Zucker', kcal: 35, protein: 0.8, carbs: 6.2, fat: 0.7, portion: 200, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'espresso', name: 'Espresso', kcal: 2, protein: 0.1, carbs: 0, fat: 0.2, portion: 30, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'cappuccino', name: 'Cappuccino', kcal: 36, protein: 2, carbs: 3, fat: 1.8, portion: 200, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'latte', name: 'Latte Macchiato', kcal: 45, protein: 2.5, carbs: 3.7, fat: 2.2, portion: 300, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'tee', name: 'Tee ungesüßt', kcal: 1, protein: 0, carbs: 0.2, fat: 0, portion: 250, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'tee-zucker', name: 'Tee mit Zucker', kcal: 17, protein: 0, carbs: 4.2, fat: 0, portion: 250, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'kakao', name: 'Kakao (mit Milch)', kcal: 80, protein: 3.5, carbs: 11, fat: 2.5, portion: 250, portionLabel: '1 Tasse', unit: 'ml' },
+  { id: 'milch-35', name: 'Milch 3,5 %', kcal: 64, protein: 3.3, carbs: 4.8, fat: 3.5, portion: 250, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'hafermilch', name: 'Haferdrink', kcal: 45, protein: 0.5, carbs: 6.5, fat: 1.5, portion: 250, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'cola', name: 'Cola', kcal: 42, protein: 0, carbs: 10.6, fat: 0, portion: 330, portionLabel: '1 Dose', unit: 'ml' },
+  { id: 'cola-zero', name: 'Cola Zero / Light', kcal: 0.3, protein: 0, carbs: 0, fat: 0, portion: 330, portionLabel: '1 Dose', unit: 'ml' },
+  { id: 'limonade', name: 'Limonade (Orange/Zitrone)', kcal: 38, protein: 0, carbs: 9.3, fat: 0, portion: 330, portionLabel: '1 Dose', unit: 'ml' },
+  { id: 'eistee', name: 'Eistee', kcal: 28, protein: 0, carbs: 6.8, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'energy', name: 'Energy Drink', kcal: 45, protein: 0, carbs: 11, fat: 0, portion: 250, portionLabel: '1 Dose', unit: 'ml' },
+  { id: 'orangensaft', name: 'Orangensaft', kcal: 45, protein: 0.7, carbs: 10, fat: 0.2, portion: 200, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'apfelsaft', name: 'Apfelsaft', kcal: 46, protein: 0.1, carbs: 11, fat: 0.1, portion: 200, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'apfelschorle', name: 'Apfelschorle', kcal: 24, protein: 0, carbs: 5.5, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'multivitaminsaft', name: 'Multivitaminsaft', kcal: 50, protein: 0.3, carbs: 11.5, fat: 0.1, portion: 200, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'smoothie', name: 'Smoothie', kcal: 55, protein: 0.6, carbs: 12.5, fat: 0.2, portion: 250, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'proteinshake', name: 'Proteinshake (mit Wasser)', kcal: 40, protein: 8, carbs: 1, fat: 0.5, portion: 300, portionLabel: '1 Shake', unit: 'ml' },
+  { id: 'bier', name: 'Bier', kcal: 43, protein: 0.5, carbs: 3.6, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'bier-alkoholfrei', name: 'Bier alkoholfrei', kcal: 25, protein: 0.4, carbs: 5.5, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'radler', name: 'Radler', kcal: 42, protein: 0.3, carbs: 7.5, fat: 0, portion: 500, portionLabel: '1 Flasche', unit: 'ml' },
+  { id: 'wein', name: 'Rotwein', kcal: 85, protein: 0.1, carbs: 2.6, fat: 0, portion: 200, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'weisswein', name: 'Weißwein', kcal: 82, protein: 0.1, carbs: 2.6, fat: 0, portion: 200, portionLabel: '1 Glas', unit: 'ml' },
+  { id: 'sekt', name: 'Sekt / Prosecco', kcal: 85, protein: 0.2, carbs: 4, fat: 0, portion: 100, portionLabel: '1 Glas', unit: 'ml' },
+  // Sonstiges
+  { id: 'zucker', name: 'Zucker', kcal: 400, protein: 0, carbs: 100, fat: 0, portion: 4, portionLabel: '1 TL' },
   { id: 'olivenoel', name: 'Olivenöl', kcal: 884, protein: 0, carbs: 0, fat: 100, portion: 10, portionLabel: '1 EL' },
 ];
 
-export function searchFoods(query: string, extra: Food[] = []): Food[] {
-  const all = [...extra, ...FOODS];
+export function searchFoods(query: string, extra: Food[] = [], drinksOnly = false): Food[] {
+  const all = [...extra, ...FOODS].filter((f) => !drinksOnly || isDrink(f));
   const q = query.trim().toLowerCase();
   if (!q) return all;
   return all

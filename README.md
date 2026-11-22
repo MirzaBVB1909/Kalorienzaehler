@@ -6,7 +6,8 @@ Eine Kalorienzähler-App mit [Expo](https://expo.dev) (SDK 58), Expo Router und 
 
 - **Tagebuch:** Kalorienring mit Restkalorien, Makro-Balken (Eiweiß, Kohlenhydrate, Fett), Einträge nach Mahlzeit (Frühstück, Mittag, Abend, Snacks), Navigation zwischen Tagen
 - **Hinzufügen:**
-  - Suche in rund 60 gängigen Lebensmitteln (Nährwerte pro 100 g) mit Portionsvorschlägen
+  - Suche in rund 85 gängigen Lebensmitteln und Getränken (Nährwerte pro 100 g bzw. 100 ml) mit Portionsvorschlägen
+  - Filter „Getränke“ (Wasser, Kaffee, Tee, Säfte, Softdrinks, Alkohol …), Mengen in ml
   - „Zuletzt verwendet“ für schnelles Wiederholen
   - Schnelleingabe nur mit Kalorien (z. B. Restaurant)
   - Eigene Lebensmittel anlegen (werden gespeichert und tauchen in der Suche auf)

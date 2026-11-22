@@ -87,7 +87,7 @@ export default function DiaryScreen() {
                       {e.name}
                     </Text>
                     <Text style={styles.entryMeta}>
-                      {e.grams != null ? `${e.grams} g · ` : ''}E {fmt(e.protein)} · K {fmt(e.carbs)} · F {fmt(e.fat)}
+                      {e.grams != null ? `${e.grams} ${e.unit ?? 'g'} · ` : ''}E {fmt(e.protein)} · K {fmt(e.carbs)} · F {fmt(e.fat)}
                     </Text>
                   </View>
                   <Text style={styles.entryKcal}>{e.kcal}</Text>

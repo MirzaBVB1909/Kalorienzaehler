@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Chips, confirm, Field, fmt, parseNum } from '../components/ui';
-import { Food, FOODS, searchFoods } from '../lib/foods';
+import { Food, FOODS, isDrink, searchFoods, Unit, unitOf } from '../lib/foods';
 import { Meal, MEALS, mealForNow, scaleMacros, toDateKey } from '../lib/nutrition';
 import { recentFoodIds, useStore } from '../lib/store';
 import { colors } from '../lib/theme';
@@ -20,6 +20,7 @@ export default function AddScreen() {
   const [mode, setMode] = useState<Mode>('search');
   const [meal, setMeal] = useState<Meal>(params.meal ?? mealForNow());
   const [query, setQuery] = useState('');
+  const [drinksOnly, setDrinksOnly] = useState(false);
   const [selected, setSelected] = useState<Food | null>(null);
 
   const allFoods = useMemo(() => [...customFoods, ...FOODS], [customFoods]);
@@ -30,7 +31,7 @@ export default function AddScreen() {
         .filter((f): f is Food => !!f),
     [entries, allFoods],
   );
-  const results = useMemo(() => searchFoods(query, customFoods), [query, customFoods]);
+  const results = useMemo(() => searchFoods(query, customFoods, drinksOnly), [query, customFoods, drinksOnly]);
 
   if (selected) {
     return (
@@ -41,7 +42,7 @@ export default function AddScreen() {
         onBack={() => setSelected(null)}
         onAdd={(grams) => {
           const m = scaleMacros(selected, grams);
-          addEntry({ ...m, date, meal, name: selected.name, grams, foodId: selected.id });
+          addEntry({ ...m, date, meal, name: selected.name, grams, unit: unitOf(selected), foodId: selected.id });
           router.back();
         }}
       />
@@ -70,12 +71,22 @@ export default function AddScreen() {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Lebensmittel suchen…"
+              placeholder="Essen oder Getränk suchen…"
               placeholderTextColor={colors.muted}
               style={styles.search}
               autoFocus
               autoCorrect={false}
             />
+            <View style={{ marginTop: 10 }}>
+              <Chips
+                options={[
+                  { key: 'all', label: 'Alles' },
+                  { key: 'drinks', label: '🥤 Getränke' },
+                ]}
+                value={drinksOnly ? 'drinks' : 'all'}
+                onChange={(v) => setDrinksOnly(v === 'drinks')}
+              />
+            </View>
           </View>
           <FlatList
             data={results}
@@ -83,7 +94,7 @@ export default function AddScreen() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
             ListHeaderComponent={
-              !query && recent.length > 0 ? (
+              !query && !drinksOnly && recent.length > 0 ? (
                 <View style={{ marginBottom: 8 }}>
                   <Text style={styles.listHeader}>Zuletzt verwendet</Text>
                   <View style={styles.recentWrap}>
@@ -117,11 +128,12 @@ export default function AddScreen() {
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.foodName}>
+                      {isDrink(item) ? '🥤 ' : ''}
                       {item.name}
                       {isCustom ? '  ⭐' : ''}
                     </Text>
                     <Text style={styles.foodMeta}>
-                      pro 100 g · E {fmt(item.protein)} · K {fmt(item.carbs)} · F {fmt(item.fat)}
+                      pro 100 {unitOf(item)} · E {fmt(item.protein)} · K {fmt(item.carbs)} · F {fmt(item.fat)}
                     </Text>
                   </View>
                   <Text style={styles.foodKcal}>{item.kcal} kcal</Text>
@@ -176,11 +188,11 @@ function AmountPanel({
   const valid = grams > 0;
   const m = scaleMacros(food, valid ? grams : 0);
 
+  const unit = unitOf(food);
+  const steps = unit === 'ml' ? [100, 250, 500] : [50, 100, 200];
   const quick = [
-    ...(food.portionLabel ? [{ label: food.portionLabel, g: food.portion }] : []),
-    { label: '50 g', g: 50 },
-    { label: '100 g', g: 100 },
-    { label: '200 g', g: 200 },
+    ...(food.portionLabel ? [{ label: `${food.portionLabel} (${food.portion} ${unit})`, g: food.portion }] : []),
+    ...steps.map((g) => ({ label: `${g} ${unit}`, g })),
   ];
 
   return (
@@ -190,10 +202,10 @@ function AmountPanel({
       </Pressable>
       <Card>
         <Text style={styles.detailTitle}>{food.name}</Text>
-        <Text style={styles.foodMeta}>{food.kcal} kcal pro 100 g</Text>
+        <Text style={styles.foodMeta}>{food.kcal} kcal pro 100 {unit}</Text>
 
         <View style={{ marginTop: 16 }}>
-          <Field label="Menge" suffix="g" value={gramsText} onChangeText={setGramsText} keyboardType="decimal-pad" selectTextOnFocus />
+          <Field label="Menge" suffix={unit} value={gramsText} onChangeText={setGramsText} keyboardType="decimal-pad" selectTextOnFocus />
         </View>
         <View style={[styles.recentWrap, { marginTop: 10 }]}>
           {quick.map((q) => (
@@ -284,6 +296,7 @@ function CustomFood({ initialName, onSave }: { initialName: string; onSave: (f: 
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [portion, setPortion] = useState('100');
+  const [unit, setUnit] = useState<Unit>('g');
   const k = parseNum(kcal);
   const p = parseNum(portion);
   const opt = (s: string) => (s.trim() ? Math.max(0, parseNum(s) || 0) : 0);
@@ -292,12 +305,22 @@ function CustomFood({ initialName, onSave }: { initialName: string; onSave: (f: 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <Card>
-        <Text style={styles.hint}>Lege ein Lebensmittel mit Nährwerten pro 100 g an (steht auf der Verpackung). Es wird gespeichert und taucht in der Suche auf.</Text>
+        <Text style={styles.hint}>Lege ein Lebensmittel oder Getränk mit Nährwerten pro 100 g bzw. 100 ml an (steht auf der Verpackung). Es wird gespeichert und taucht in der Suche auf.</Text>
         <Field label="Name" value={name} onChangeText={setName} placeholder="z. B. Proteinriegel Schoko" />
         <View style={{ height: 12 }} />
+        <Text style={styles.fieldTitle}>Art</Text>
+        <Chips<Unit>
+          options={[
+            { key: 'g', label: '🍽️ Essen (g)' },
+            { key: 'ml', label: '🥤 Getränk (ml)' },
+          ]}
+          value={unit}
+          onChange={setUnit}
+        />
+        <View style={{ height: 12 }} />
         <View style={styles.row2}>
-          <Field label="Kalorien / 100 g" suffix="kcal" value={kcal} onChangeText={setKcal} keyboardType="decimal-pad" />
-          <Field label="Portion" suffix="g" value={portion} onChangeText={setPortion} keyboardType="decimal-pad" />
+          <Field label={`Kalorien / 100 ${unit}`} suffix="kcal" value={kcal} onChangeText={setKcal} keyboardType="decimal-pad" />
+          <Field label="Portion" suffix={unit} value={portion} onChangeText={setPortion} keyboardType="decimal-pad" />
         </View>
         <View style={styles.row3}>
           <Field label="Eiweiß" suffix="g" value={protein} onChangeText={setProtein} keyboardType="decimal-pad" />
@@ -316,6 +339,7 @@ function CustomFood({ initialName, onSave }: { initialName: string; onSave: (f: 
             carbs: opt(carbs),
             fat: opt(fat),
             portion: Math.round(p),
+            unit,
           })
         }
       />
