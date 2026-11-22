@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import BarcodeScanner from '../components/BarcodeScanner';
+import PhotoPanel from '../components/PhotoPanel';
 import { Button, Card, Chips, confirm, Field, fmt, parseNum } from '../components/ui';
 import { Food, FOODS, isDrink, searchFoods, Unit, unitOf } from '../lib/foods';
 import { Meal, MEALS, mealForNow, round1, scaleMacros, sumMacros, toDateKey } from '../lib/nutrition';
@@ -23,6 +24,7 @@ export default function AddScreen() {
   const [meal, setMeal] = useState<Meal>(params.meal ?? mealForNow());
   const [query, setQuery] = useState('');
   const [drinksOnly, setDrinksOnly] = useState(false);
+  const [scanKind, setScanKind] = useState<'barcode' | 'meal' | 'label'>('barcode');
   const [selected, setSelected] = useState<Food | null>(null);
 
   const allFoods = useMemo(() => [...customFoods, ...FOODS], [customFoods]);
@@ -171,10 +173,33 @@ export default function AddScreen() {
       )}
 
       {mode === 'scan' && (
-        <ScanPanel
-          onFound={(food) => setSelected(addCustomFood(food))}
-          onManual={() => setMode('custom')}
-        />
+        <View style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <Chips
+              options={[
+                { key: 'barcode', label: '▥ Barcode' },
+                { key: 'meal', label: '📸 Essen (KI)' },
+                { key: 'label', label: '🏷️ Etikett (KI)' },
+              ]}
+              value={scanKind}
+              onChange={setScanKind}
+            />
+          </View>
+          {scanKind === 'barcode' ? (
+            <ScanPanel onFound={(food) => setSelected(addCustomFood(food))} onManual={() => setMode('custom')} />
+          ) : (
+            <PhotoPanel
+              mode={scanKind}
+              meal={meal}
+              setMeal={setMeal}
+              onAddEntries={(items) => {
+                items.forEach((it) => addEntry({ ...it, date, meal, foodId: null }));
+                router.back();
+              }}
+              onSaveFood={(food) => setSelected(addCustomFood(food))}
+            />
+          )}
+        </View>
       )}
 
       {mode === 'quick' && (

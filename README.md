@@ -9,6 +9,7 @@ Eine Kalorienzähler-App mit [Expo](https://expo.dev) (SDK 58), Expo Router und 
   - Suche in rund 180 Lebensmitteln, Getränken und Gerichten (u. a. österreichische, türkische und italienische Küche) (Nährwerte pro 100 g bzw. 100 ml) mit Portionsvorschlägen
   - Filter „Getränke“ (Wasser, Kaffee, Tee, Säfte, Softdrinks, Alkohol …), Mengen in ml
   - **Barcode-Scanner:** Strichcode von Verpackungen scannen (oder Nummer eintippen), Nährwerte kommen aus der freien Datenbank Open Food Facts
+  - **KI-Fotoerkennung (Claude):** Teller fotografieren → Bestandteile, Mengen und Kalorien werden geschätzt; Nährwert-Etiketten werden abgelesen
   - „Zuletzt verwendet“ für schnelles Wiederholen
   - Schnelleingabe nur mit Kalorien (z. B. Restaurant)
   - Eigene Lebensmittel anlegen (werden gespeichert und tauchen in der Suche auf)
@@ -52,3 +53,14 @@ src/
 ```bash
 npx tsc --noEmit
 ```
+
+## KI-Fotoerkennung einrichten
+
+Die Foto-Erkennung läuft über eine Server-Funktion (`src/app/api/analyze+api.ts`, EAS Hosting), damit der API-Schlüssel geheim bleibt. Auf expo.dev unter *Projekt → Environment variables* (Umgebung **production**) anlegen:
+
+| Name | Sichtbarkeit | Wert |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Secret | API-Schlüssel von platform.claude.com |
+| `APP_ACCESS_CODE` | Secret | frei gewählter Code, den man in der App einmal eingibt |
+
+Danach neu veröffentlichen: `npx expo export --platform web && npx eas-cli@latest deploy --prod --environment production`
