@@ -8,9 +8,13 @@ import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
 export default function DiaryScreen() {
-  const { loaded, entries, profile, selectedDate, setSelectedDate, removeEntry } = useStore();
+  const { loaded, entries, profile, water, selectedDate, setSelectedDate, removeEntry, copyEntries, addWater } = useStore();
   const targets = dailyTargets(profile);
   const dayEntries = useMemo(() => entries.filter((e) => e.date === selectedDate), [entries, selectedDate]);
+  const prevDate = addDays(selectedDate, -1);
+  const prevEntries = useMemo(() => entries.filter((e) => e.date === prevDate), [entries, prevDate]);
+  const waterMl = water[selectedDate] ?? 0;
+  const waterGoal = profile.waterGoalMl || 2000;
   const total = sumMacros(dayEntries);
   const remaining = targets.kcal - total.kcal;
   const over = remaining < 0;
@@ -65,9 +69,37 @@ export default function DiaryScreen() {
           </View>
         </Card>
 
+        <Card style={{ paddingVertical: 12 }}>
+          <View style={styles.mealHeader}>
+            <Text style={styles.mealTitle}>💧 Wasser</Text>
+            <Text style={styles.mealKcal}>
+              {fmt(waterMl / 1000)} / {fmt(waterGoal / 1000)} l
+            </Text>
+          </View>
+          <View style={styles.waterTrack}>
+            <View style={[styles.waterFill, { width: `${Math.min(1, waterMl / waterGoal) * 100}%` }]} />
+          </View>
+          <View style={styles.waterRow}>
+            <Pressable
+              accessibilityLabel="Ein Glas Wasser weniger"
+              disabled={waterMl <= 0}
+              onPress={() => addWater(selectedDate, -250)}
+              style={[styles.waterBtn, waterMl <= 0 && { opacity: 0.4 }]}
+            >
+              <Text style={styles.waterBtnText}>− Glas</Text>
+            </Pressable>
+            <Text style={styles.waterGlasses}>{'🥛'.repeat(Math.min(12, Math.round(waterMl / 250))) || 'Noch kein Glas'}</Text>
+            <Pressable accessibilityLabel="Ein Glas Wasser (250 ml) dazu" onPress={() => addWater(selectedDate, 250)} style={[styles.waterBtn, styles.waterBtnPlus]}>
+              <Text style={[styles.waterBtnText, { color: '#fff' }]}>+ Glas</Text>
+            </Pressable>
+          </View>
+        </Card>
+
         {MEALS.map((meal) => {
           const items = dayEntries.filter((e) => e.meal === meal.key);
           const mealKcal = items.reduce((s, e) => s + e.kcal, 0);
+          const prevItems = prevEntries.filter((e) => e.meal === meal.key);
+          const prevKcal = prevItems.reduce((s, e) => s + e.kcal, 0);
           return (
             <Card key={meal.key} style={{ paddingVertical: 12 }}>
               <View style={styles.mealHeader}>
@@ -79,6 +111,8 @@ export default function DiaryScreen() {
               {items.map((e) => (
                 <Pressable
                   key={e.id}
+                  accessibilityLabel={`${e.name} bearbeiten`}
+                  onPress={() => router.push({ pathname: '/edit', params: { id: e.id } })}
                   onLongPress={() => confirm('Eintrag löschen?', `„${e.name}“ wird entfernt.`, () => removeEntry(e.id))}
                   style={styles.entry}
                 >
@@ -101,9 +135,20 @@ export default function DiaryScreen() {
                   </Pressable>
                 </Pressable>
               ))}
-              <Pressable onPress={() => openAdd(meal.key)} style={styles.addRow}>
-                <Text style={styles.addText}>+ Hinzufügen</Text>
-              </Pressable>
+              <View style={styles.addRowWrap}>
+                <Pressable onPress={() => openAdd(meal.key)} style={styles.addRow}>
+                  <Text style={styles.addText}>+ Hinzufügen</Text>
+                </Pressable>
+                {prevItems.length > 0 && (
+                  <Pressable
+                    accessibilityLabel={`${meal.label} wie am Vortag übernehmen`}
+                    onPress={() => copyEntries(prevItems.map((e) => e.id), selectedDate)}
+                    style={styles.addRow}
+                  >
+                    <Text style={styles.copyText}>↺ Wie Vortag ({prevKcal} kcal)</Text>
+                  </Pressable>
+                )}
+              </View>
             </Card>
           );
         })}
@@ -146,7 +191,16 @@ const styles = StyleSheet.create({
   entryKcal: { fontSize: 15, fontWeight: '600', color: colors.text, marginLeft: 8 },
   deleteBtn: { marginLeft: 12, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   deleteText: { fontSize: 11, color: colors.muted },
+  addRowWrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   addRow: { paddingTop: 10 },
+  copyText: { color: colors.muted, fontWeight: '600', fontSize: 14 },
+  waterTrack: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: 'hidden', marginTop: 6 },
+  waterFill: { height: 10, borderRadius: 5, backgroundColor: colors.water },
+  waterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 8 },
+  waterBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.waterSoft },
+  waterBtnPlus: { backgroundColor: colors.water },
+  waterBtnText: { fontWeight: '700', color: colors.water, fontSize: 14 },
+  waterGlasses: { flex: 1, textAlign: 'center', fontSize: 14, color: colors.muted },
   addText: { color: colors.primary, fontWeight: '600', fontSize: 15 },
   fab: {
     position: 'absolute',

@@ -17,11 +17,15 @@ export type Entry = Macros & {
 
 export type WeightLog = { date: string; kg: number };
 
-type State = {
+export type State = {
   entries: Entry[];
   profile: Profile;
   customFoods: Food[];
   weights: WeightLog[];
+  /** ids von Lebensmitteln, die als Favorit markiert sind. */
+  favorites: string[];
+  /** Getrunkenes Wasser pro Tag in ml (YYYY-MM-DD → ml). */
+  water: Record<string, number>;
 };
 
 type Store = State & {
@@ -29,12 +33,19 @@ type Store = State & {
   selectedDate: string;
   setSelectedDate: (d: string) => void;
   addEntry: (e: Omit<Entry, 'id' | 'createdAt'>) => void;
+  updateEntry: (id: string, changes: Partial<Omit<Entry, 'id' | 'createdAt'>>) => void;
   removeEntry: (id: string) => void;
+  /** Kopiert Einträge (z. B. das Frühstück von gestern) auf ein anderes Datum. */
+  copyEntries: (ids: string[], toDate: string) => void;
   updateProfile: (p: Partial<Profile>) => void;
   /** Speichert ein eigenes Lebensmittel; mit `id` wird ein vorhandenes gleicher id ersetzt (z. B. Barcode-Produkte). */
   addCustomFood: (f: Omit<Food, 'id'> & { id?: string }) => Food;
   removeCustomFood: (id: string) => void;
+  toggleFavorite: (foodId: string) => void;
+  addWater: (date: string, ml: number) => void;
   logWeight: (kg: number) => void;
+  /** Ersetzt alle Daten (Wiederherstellen aus einer Sicherung). */
+  replaceAll: (s: State) => void;
   resetAll: () => void;
 };
 
@@ -45,7 +56,23 @@ const INITIAL: State = {
   profile: DEFAULT_PROFILE,
   customFoods: [],
   weights: [],
+  favorites: [],
+  water: {},
 };
+
+/** Ergänzt fehlende Felder (ältere Speicherstände, Sicherungsdateien). */
+export function normalizeState(parsed: Partial<State>): State {
+  return {
+    ...INITIAL,
+    ...parsed,
+    entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+    customFoods: Array.isArray(parsed.customFoods) ? parsed.customFoods : [],
+    weights: Array.isArray(parsed.weights) ? parsed.weights : [],
+    favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
+    water: parsed.water && typeof parsed.water === 'object' ? parsed.water : {},
+    profile: { ...DEFAULT_PROFILE, ...parsed.profile },
+  };
+}
 
 const StoreContext = createContext<Store | null>(null);
 
@@ -62,12 +89,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
         if (!raw) return;
-        const parsed = JSON.parse(raw) as Partial<State>;
-        setState({
-          ...INITIAL,
-          ...parsed,
-          profile: { ...DEFAULT_PROFILE, ...parsed.profile },
-        });
+        setState(normalizeState(JSON.parse(raw) as Partial<State>));
       })
       .catch((err) => console.warn('Daten konnten nicht geladen werden', err))
       .finally(() => setLoaded(true));
@@ -84,8 +106,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, entries: [...s.entries, { ...e, id: uid(), createdAt: Date.now() }] }));
   }, []);
 
+  const updateEntry = useCallback<Store['updateEntry']>((id, changes) => {
+    setState((s) => ({ ...s, entries: s.entries.map((e) => (e.id === id ? { ...e, ...changes } : e)) }));
+  }, []);
+
   const removeEntry = useCallback((id: string) => {
     setState((s) => ({ ...s, entries: s.entries.filter((e) => e.id !== id) }));
+  }, []);
+
+  const copyEntries = useCallback((ids: string[], toDate: string) => {
+    setState((s) => {
+      const now = Date.now();
+      const copies = s.entries
+        .filter((e) => ids.includes(e.id))
+        .map((e, i) => ({ ...e, id: uid(), date: toDate, createdAt: now + i }));
+      return { ...s, entries: [...s.entries, ...copies] };
+    });
   }, []);
 
   const updateProfile = useCallback((p: Partial<Profile>) => {
@@ -99,7 +135,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeCustomFood = useCallback((id: string) => {
-    setState((s) => ({ ...s, customFoods: s.customFoods.filter((f) => f.id !== id) }));
+    setState((s) => ({
+      ...s,
+      customFoods: s.customFoods.filter((f) => f.id !== id),
+      favorites: s.favorites.filter((f) => f !== id),
+    }));
+  }, []);
+
+  const toggleFavorite = useCallback((foodId: string) => {
+    setState((s) => ({
+      ...s,
+      favorites: s.favorites.includes(foodId) ? s.favorites.filter((f) => f !== foodId) : [foodId, ...s.favorites],
+    }));
+  }, []);
+
+  const addWater = useCallback((date: string, ml: number) => {
+    setState((s) => ({ ...s, water: { ...s.water, [date]: Math.max(0, (s.water[date] ?? 0) + ml) } }));
   }, []);
 
   const logWeight = useCallback((kg: number) => {
@@ -113,6 +164,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const replaceAll = useCallback((next: State) => setState(normalizeState(next)), []);
   const resetAll = useCallback(() => setState(INITIAL), []);
 
   const value = useMemo<Store>(
@@ -122,14 +174,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       selectedDate,
       setSelectedDate,
       addEntry,
+      updateEntry,
       removeEntry,
+      copyEntries,
       updateProfile,
       addCustomFood,
       removeCustomFood,
+      toggleFavorite,
+      addWater,
       logWeight,
+      replaceAll,
       resetAll,
     }),
-    [state, loaded, selectedDate, addEntry, removeEntry, updateProfile, addCustomFood, removeCustomFood, logWeight, resetAll],
+    [
+      state,
+      loaded,
+      selectedDate,
+      addEntry,
+      updateEntry,
+      removeEntry,
+      copyEntries,
+      updateProfile,
+      addCustomFood,
+      removeCustomFood,
+      toggleFavorite,
+      addWater,
+      logWeight,
+      replaceAll,
+      resetAll,
+    ],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

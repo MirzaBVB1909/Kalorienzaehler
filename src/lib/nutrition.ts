@@ -12,6 +12,10 @@ export type Profile = {
   goal: Goal;
   /** Manuelles Kalorienziel; überschreibt die Berechnung, wenn gesetzt. */
   customKcal: number | null;
+  /** Tagesziel Wasser in ml. */
+  waterGoalMl: number;
+  /** Optionales Zielgewicht in kg (für das Gewichtsdiagramm). */
+  targetWeightKg: number | null;
 };
 
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number };
@@ -45,6 +49,8 @@ export const DEFAULT_PROFILE: Profile = {
   activity: 'light',
   goal: 'maintain',
   customKcal: null,
+  waterGoalMl: 2000,
+  targetWeightKg: null,
 };
 
 /** Grundumsatz nach Mifflin-St Jeor. */

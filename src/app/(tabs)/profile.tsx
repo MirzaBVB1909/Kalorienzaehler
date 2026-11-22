@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Button, Card, Chips, confirm, Field, parseNum, SectionTitle } from '../../components/ui';
 import {
@@ -14,11 +14,16 @@ import {
   Sex,
   tdee,
 } from '../../lib/nutrition';
+import { exportBackup, exportCsv, pickBackup } from '../../lib/backup';
 import { useStore } from '../../lib/store';
-import { colors } from '../../lib/theme';
+import { colors, getThemePref, setThemePref, ThemePref } from '../../lib/theme';
 
 export default function ProfileScreen() {
-  const { profile, updateProfile, logWeight, resetAll } = useStore();
+  const store = useStore();
+  const { profile, updateProfile, logWeight, resetAll, replaceAll } = store;
+  const [targetW, setTargetW] = useState(profile.targetWeightKg ? String(profile.targetWeightKg).replace('.', ',') : '');
+  const [waterGoal, setWaterGoal] = useState(String((profile.waterGoalMl || 2000) / 1000).replace('.', ','));
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [age, setAge] = useState(String(profile.age));
   const [height, setHeight] = useState(String(profile.heightCm));
   const [weight, setWeight] = useState(String(profile.weightKg).replace('.', ','));
@@ -30,7 +35,47 @@ export default function ProfileScreen() {
     setHeight(String(profile.heightCm));
     setWeight(String(profile.weightKg).replace('.', ','));
     setCustom(profile.customKcal ? String(profile.customKcal) : '');
-  }, [profile.age, profile.heightCm, profile.weightKg, profile.customKcal]);
+    setTargetW(profile.targetWeightKg ? String(profile.targetWeightKg).replace('.', ',') : '');
+    setWaterGoal(String((profile.waterGoalMl || 2000) / 1000).replace('.', ','));
+  }, [profile.age, profile.heightCm, profile.weightKg, profile.customKcal, profile.targetWeightKg, profile.waterGoalMl]);
+
+  const snapshot = () => ({
+    entries: store.entries,
+    profile: store.profile,
+    customFoods: store.customFoods,
+    weights: store.weights,
+    favorites: store.favorites,
+    water: store.water,
+  });
+
+  const runExport = async (kind: 'backup' | 'csv') => {
+    try {
+      const res = kind === 'backup' ? await exportBackup(snapshot()) : await exportCsv(snapshot());
+      if (res === 'downloaded') setBackupMsg('✅ Datei wurde heruntergeladen (Ordner „Downloads“ bzw. „Dateien“).');
+      else if (res === 'shared') setBackupMsg('✅ Datei wurde geteilt bzw. gespeichert.');
+      else setBackupMsg(null);
+    } catch {
+      setBackupMsg('❌ Export hat nicht geklappt. Bitte nochmal versuchen.');
+    }
+  };
+
+  const runRestore = async () => {
+    try {
+      const data = await pickBackup();
+      if (!data) return;
+      confirm(
+        'Sicherung wiederherstellen?',
+        `Die Sicherung enthält ${data.entries.length} Einträge. Deine aktuellen Daten in der App werden dadurch ersetzt.`,
+        () => {
+          replaceAll(data);
+          setBackupMsg(`✅ Sicherung wiederhergestellt (${data.entries.length} Einträge).`);
+        },
+        'Wiederherstellen',
+      );
+    } catch (err) {
+      setBackupMsg(`❌ ${(err as Error).message}`);
+    }
+  };
 
   const commitNumber = (text: string, min: number, max: number, apply: (n: number) => void, reset: () => void) => {
     const n = parseNum(text);
@@ -157,6 +202,75 @@ export default function ProfileScreen() {
         )}
       </Card>
 
+      <Card>
+        <SectionTitle>Wasser & Zielgewicht</SectionTitle>
+        <View style={styles.row}>
+          <Field
+            label="Wasser pro Tag"
+            suffix="l"
+            value={waterGoal}
+            onChangeText={setWaterGoal}
+            keyboardType="decimal-pad"
+            onBlur={() =>
+              commitNumber(
+                waterGoal,
+                0.5,
+                6,
+                (n) => updateProfile({ waterGoalMl: Math.round(n * 1000) }),
+                () => setWaterGoal(String((profile.waterGoalMl || 2000) / 1000).replace('.', ',')),
+              )
+            }
+          />
+          <Field
+            label="Zielgewicht (optional)"
+            suffix="kg"
+            value={targetW}
+            onChangeText={setTargetW}
+            keyboardType="decimal-pad"
+            placeholder="–"
+            onBlur={() => {
+              if (!targetW.trim()) return updateProfile({ targetWeightKg: null });
+              commitNumber(
+                targetW,
+                30,
+                400,
+                (n) => updateProfile({ targetWeightKg: Math.round(n * 10) / 10 }),
+                () => setTargetW(profile.targetWeightKg ? String(profile.targetWeightKg).replace('.', ',') : ''),
+              );
+            }}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle>Darstellung</SectionTitle>
+        {Platform.OS === 'web' ? (
+          <Chips<ThemePref>
+            options={[
+              { key: 'auto', label: '📱 Wie das Handy' },
+              { key: 'light', label: '☀️ Hell' },
+              { key: 'dark', label: '🌙 Dunkel' },
+            ]}
+            value={getThemePref()}
+            onChange={(p) => setThemePref(p)}
+          />
+        ) : (
+          <Text style={styles.info}>Die App folgt der Hell-/Dunkel-Einstellung deines Handys.</Text>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>💾 Daten exportieren & sichern</SectionTitle>
+        <Text style={styles.backupText}>
+          Deine Daten liegen nur auf diesem Gerät. Sichere sie regelmäßig, z. B. in iCloud Drive („In Dateien sichern“) – dann kannst du sie
+          jederzeit oder auf einem neuen Handy wiederherstellen.
+        </Text>
+        <Button title="Sicherung erstellen (alle Daten)" onPress={() => runExport('backup')} />
+        <Button title="Tagebuch als Tabelle (Excel/CSV)" variant="secondary" onPress={() => runExport('csv')} style={{ marginTop: 10 }} />
+        <Button title="Sicherung wiederherstellen" variant="secondary" onPress={runRestore} style={{ marginTop: 10 }} />
+        {backupMsg && <Text style={[styles.backupText, { marginTop: 12, marginBottom: 0 }]}>{backupMsg}</Text>}
+      </Card>
+
       <Button
         title="Alle Daten löschen"
         variant="danger"
@@ -190,5 +304,6 @@ const styles = StyleSheet.create({
   calcLabel: { color: colors.muted, fontSize: 14 },
   calcValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  backupText: { color: colors.muted, fontSize: 14, lineHeight: 20, marginBottom: 14 },
   disclaimer: { fontSize: 12, color: colors.muted, textAlign: 'center', marginBottom: 32, lineHeight: 17 },
 });

@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: colors.input,
     paddingHorizontal: 12,
   },
   input: { flex: 1, paddingVertical: 12, fontSize: 16, color: colors.text, minWidth: 0 },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
   },
   chipText: { fontSize: 14, color: colors.text, fontWeight: '500' },
 });

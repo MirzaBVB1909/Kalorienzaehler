@@ -12,7 +12,12 @@ Eine Kalorienzähler-App mit [Expo](https://expo.dev) (SDK 58), Expo Router und 
   - „Zuletzt verwendet“ für schnelles Wiederholen
   - Schnelleingabe nur mit Kalorien (z. B. Restaurant)
   - Eigene Lebensmittel anlegen (werden gespeichert und tauchen in der Suche auf)
-- **Verlauf:** Balkendiagramm für 7 oder 30 Tage, Durchschnitt, Tage im Ziel, Gewichtsverlauf
+- **Bearbeiten:** Einträge antippen, um Menge, Mahlzeit oder Werte zu ändern; „Wie Vortag“ übernimmt eine Mahlzeit von gestern
+- **Favoriten (⭐)** und **Rezepte** (Gericht aus Zutaten zusammenstellen, kcal pro Portion)
+- **Wasser-Tracker** mit Tagesziel
+- **Verlauf:** Balkendiagramm für 7 oder 30 Tage, Wochenrückblick mit Tipps, Gewichtsdiagramm mit Zielgewicht
+- **Export & Sicherung:** komplette Sicherung als Datei (wiederherstellbar) und Tagebuch als Excel/CSV-Tabelle
+- **Dunkelmodus** (automatisch oder manuell)
 - **Profil:** Kalorienbedarf nach Mifflin-St Jeor (Geschlecht, Alter, Größe, Gewicht, Aktivität, Ziel), optional ein eigenes Kalorienziel, BMI, Gewicht loggen
 
 Einträge löschen: auf ✕ tippen oder den Eintrag lange drücken.

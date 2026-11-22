@@ -5,7 +5,7 @@ import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleS
 import BarcodeScanner from '../components/BarcodeScanner';
 import { Button, Card, Chips, confirm, Field, fmt, parseNum } from '../components/ui';
 import { Food, FOODS, isDrink, searchFoods, Unit, unitOf } from '../lib/foods';
-import { Meal, MEALS, mealForNow, scaleMacros, toDateKey } from '../lib/nutrition';
+import { Meal, MEALS, mealForNow, round1, scaleMacros, sumMacros, toDateKey } from '../lib/nutrition';
 import { cleanBarcode, lookupBarcode } from '../lib/openfoodfacts';
 import { recentFoodIds, useStore } from '../lib/store';
 import { colors } from '../lib/theme';
@@ -17,7 +17,7 @@ const MEAL_OPTIONS = MEALS.map((m) => ({ key: m.key, label: m.label }));
 export default function AddScreen() {
   const params = useLocalSearchParams<{ date?: string; meal?: Meal }>();
   const date = params.date ?? toDateKey(new Date());
-  const { entries, customFoods, addEntry, addCustomFood, removeCustomFood } = useStore();
+  const { entries, customFoods, favorites, addEntry, addCustomFood, removeCustomFood, toggleFavorite } = useStore();
 
   const [mode, setMode] = useState<Mode>('search');
   const [meal, setMeal] = useState<Meal>(params.meal ?? mealForNow());
@@ -33,6 +33,10 @@ export default function AddScreen() {
         .filter((f): f is Food => !!f),
     [entries, allFoods],
   );
+  const favFoods = useMemo(
+    () => favorites.map((id) => allFoods.find((f) => f.id === id)).filter((f): f is Food => !!f),
+    [favorites, allFoods],
+  );
   const results = useMemo(() => searchFoods(query, customFoods, drinksOnly), [query, customFoods, drinksOnly]);
 
   if (selected) {
@@ -41,6 +45,8 @@ export default function AddScreen() {
         food={selected}
         meal={meal}
         setMeal={setMeal}
+        isFavorite={favorites.includes(selected.id)}
+        onToggleFavorite={() => toggleFavorite(selected.id)}
         onBack={() => setSelected(null)}
         onAdd={(grams) => {
           const m = scaleMacros(selected, grams);
@@ -97,16 +103,32 @@ export default function AddScreen() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
             ListHeaderComponent={
-              !query && !drinksOnly && recent.length > 0 ? (
+              !query && !drinksOnly && (recent.length > 0 || favFoods.length > 0) ? (
                 <View style={{ marginBottom: 8 }}>
-                  <Text style={styles.listHeader}>Zuletzt verwendet</Text>
-                  <View style={styles.recentWrap}>
-                    {recent.map((f) => (
-                      <Pressable key={f.id} onPress={() => setSelected(f)} style={styles.recentChip}>
-                        <Text style={styles.recentText}>{f.name}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  {favFoods.length > 0 && (
+                    <>
+                      <Text style={styles.listHeader}>⭐ Favoriten</Text>
+                      <View style={[styles.recentWrap, { marginBottom: 16 }]}>
+                        {favFoods.map((f) => (
+                          <Pressable key={f.id} onPress={() => setSelected(f)} style={[styles.recentChip, styles.favChip]}>
+                            <Text style={[styles.recentText, styles.favText]}>{f.name}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                  {recent.length > 0 && (
+                    <>
+                      <Text style={styles.listHeader}>Zuletzt verwendet</Text>
+                      <View style={styles.recentWrap}>
+                        {recent.map((f) => (
+                          <Pressable key={f.id} onPress={() => setSelected(f)} style={styles.recentChip}>
+                            <Text style={styles.recentText}>{f.name}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </>
+                  )}
                   <Text style={[styles.listHeader, { marginTop: 16 }]}>Alle Lebensmittel</Text>
                 </View>
               ) : undefined
@@ -133,7 +155,8 @@ export default function AddScreen() {
                     <Text style={styles.foodName}>
                       {isDrink(item) ? '🥤 ' : ''}
                       {item.name}
-                      {isCustom ? '  ⭐' : ''}
+                      {isCustom ? '  📝' : ''}
+                      {favorites.includes(item.id) ? '  ⭐' : ''}
                     </Text>
                     <Text style={styles.foodMeta}>
                       pro 100 {unitOf(item)} · E {fmt(item.protein)} · K {fmt(item.carbs)} · F {fmt(item.fat)}
@@ -166,8 +189,9 @@ export default function AddScreen() {
       )}
 
       {mode === 'custom' && (
-        <CustomFood
+        <CustomPanel
           initialName={query}
+          customFoods={customFoods}
           onSave={(food) => {
             const created = addCustomFood(food);
             setQuery('');
@@ -247,12 +271,16 @@ function AmountPanel({
   food,
   meal,
   setMeal,
+  isFavorite,
+  onToggleFavorite,
   onBack,
   onAdd,
 }: {
   food: Food;
   meal: Meal;
   setMeal: (m: Meal) => void;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
   onBack: () => void;
   onAdd: (grams: number) => void;
 }) {
@@ -274,7 +302,17 @@ function AmountPanel({
         <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 15 }}>‹ Zurück zur Suche</Text>
       </Pressable>
       <Card>
-        <Text style={styles.detailTitle}>{food.name}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <Text style={[styles.detailTitle, { flex: 1 }]}>{food.name}</Text>
+          <Pressable
+            hitSlop={12}
+            accessibilityLabel={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+            onPress={onToggleFavorite}
+            style={styles.starBtn}
+          >
+            <Text style={{ fontSize: 26, color: isFavorite ? colors.warning : colors.muted }}>{isFavorite ? '★' : '☆'}</Text>
+          </Pressable>
+        </View>
         <Text style={styles.foodMeta}>{food.kcal} kcal pro 100 {unit}</Text>
 
         <View style={{ marginTop: 16 }}>
@@ -362,6 +400,147 @@ function QuickAdd({
   );
 }
 
+function CustomPanel({
+  initialName,
+  customFoods,
+  onSave,
+}: {
+  initialName: string;
+  customFoods: Food[];
+  onSave: (f: Omit<Food, 'id'>) => void;
+}) {
+  const [kind, setKind] = useState<'food' | 'recipe'>('food');
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: 16 }}>
+        <Chips
+          options={[
+            { key: 'food', label: '🍽️ Lebensmittel' },
+            { key: 'recipe', label: '🍲 Rezept' },
+          ]}
+          value={kind}
+          onChange={setKind}
+        />
+      </View>
+      {kind === 'food' ? (
+        <CustomFood initialName={initialName} onSave={onSave} />
+      ) : (
+        <RecipeBuilder initialName={initialName} customFoods={customFoods} onSave={onSave} />
+      )}
+    </View>
+  );
+}
+
+type Ingredient = { food: Food; grams: string };
+
+function RecipeBuilder({
+  initialName,
+  customFoods,
+  onSave,
+}: {
+  initialName: string;
+  customFoods: Food[];
+  onSave: (f: Omit<Food, 'id'>) => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [query, setQuery] = useState('');
+  const [items, setItems] = useState<Ingredient[]>([]);
+  const [servings, setServings] = useState('1');
+
+  const results = useMemo(() => (query.trim() ? searchFoods(query, customFoods).slice(0, 6) : []), [query, customFoods]);
+  const parsed = items.map((i) => ({ food: i.food, g: Math.max(0, parseNum(i.grams) || 0) }));
+  const total = sumMacros(parsed.map((i) => scaleMacros(i.food, i.g)));
+  const totalWeight = parsed.reduce((s, i) => s + i.g, 0);
+  const n = Math.max(1, Math.round(parseNum(servings) || 1));
+  const valid = name.trim().length > 0 && totalWeight > 0;
+
+  const save = () => {
+    const f = 100 / totalWeight;
+    onSave({
+      name: name.trim(),
+      kcal: Math.round(total.kcal * f),
+      protein: round1(total.protein * f),
+      carbs: round1(total.carbs * f),
+      fat: round1(total.fat * f),
+      portion: Math.round(totalWeight / n),
+      portionLabel: '1 Portion',
+      unit: 'g',
+    });
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <Card>
+        <Text style={styles.hint}>
+          Stell ein Gericht aus Zutaten zusammen, z. B. deine selbstgemachte Kürbissuppe. Die App rechnet die Kalorien pro Portion aus.
+        </Text>
+        <Field label="Name des Rezepts" value={name} onChangeText={setName} placeholder="z. B. Omas Kürbissuppe" />
+        <View style={{ height: 12 }} />
+        <Field label="Zutat hinzufügen" value={query} onChangeText={setQuery} placeholder="Zutat suchen, z. B. Kürbis" />
+        {results.map((f) => (
+          <Pressable
+            key={f.id}
+            onPress={() => {
+              setItems((prev) => [...prev, { food: f, grams: String(f.portion) }]);
+              setQuery('');
+            }}
+            style={styles.ingredientResult}
+          >
+            <Text style={styles.foodName}>+ {f.name}</Text>
+            <Text style={styles.foodMeta}>
+              {f.kcal} kcal / 100 {unitOf(f)}
+            </Text>
+          </Pressable>
+        ))}
+        {query.trim() !== '' && results.length === 0 && (
+          <Text style={[styles.foodMeta, { marginTop: 8 }]}>Keine Zutat gefunden. Lege sie zuerst unter „Lebensmittel“ an.</Text>
+        )}
+      </Card>
+
+      {items.length > 0 && (
+        <Card>
+          <Text style={styles.fieldTitle}>Zutaten</Text>
+          {items.map((it, idx) => (
+            <View key={`${it.food.id}-${idx}`} style={styles.ingredientRow}>
+              <Text style={[styles.foodName, { flex: 1 }]} numberOfLines={2}>
+                {it.food.name}
+              </Text>
+              <View style={{ width: 110 }}>
+                <Field
+                  label=""
+                  suffix={unitOf(it.food)}
+                  value={it.grams}
+                  onChangeText={(t) => setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, grams: t } : p)))}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <Pressable
+                hitSlop={10}
+                accessibilityLabel={`${it.food.name} entfernen`}
+                onPress={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
+                style={{ paddingHorizontal: 8 }}
+              >
+                <Text style={{ color: colors.muted, fontSize: 16 }}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+          <View style={{ marginTop: 12 }}>
+            <Field label="Anzahl Portionen" value={servings} onChangeText={setServings} keyboardType="number-pad" />
+          </View>
+          <View style={styles.bigKcalWrap}>
+            <Text style={styles.bigKcal}>{Math.round(total.kcal / n)}</Text>
+            <Text style={styles.foodMeta}>
+              kcal pro Portion ({Math.round(totalWeight / n)} g) · gesamt {total.kcal} kcal
+            </Text>
+          </View>
+        </Card>
+      )}
+
+      <Button title="Rezept speichern & auswählen" disabled={!valid} onPress={save} />
+    </ScrollView>
+  );
+}
+
 function CustomFood({ initialName, onSave }: { initialName: string; onSave: (f: Omit<Food, 'id'>) => void }) {
   const [name, setName] = useState(initialName);
   const [kcal, setKcal] = useState('');
@@ -421,14 +600,14 @@ function CustomFood({ initialName, onSave }: { initialName: string; onSave: (f: 
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', margin: 16, marginBottom: 8, backgroundColor: colors.border, borderRadius: 10, padding: 3 },
+  tabs: { flexDirection: 'row', margin: 16, marginBottom: 8, backgroundColor: colors.segment, borderRadius: 10, padding: 3 },
   tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabActive: { backgroundColor: '#fff' },
+  tabActive: { backgroundColor: colors.segmentActive },
   tabText: { color: colors.muted, fontWeight: '600' },
   tabTextActive: { color: colors.text },
   searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
   search: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.input,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -441,10 +620,15 @@ const styles = StyleSheet.create({
   recentWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   recentChip: { backgroundColor: colors.primarySoft, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 16 },
   recentText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
+  favChip: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.warning },
+  favText: { color: colors.text },
+  starBtn: { paddingLeft: 12, paddingTop: 2 },
+  ingredientResult: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  ingredientRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 8 },
   foodRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
