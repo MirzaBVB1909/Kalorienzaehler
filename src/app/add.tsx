@@ -2,13 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import BarcodeScanner from '../components/BarcodeScanner';
 import { Button, Card, Chips, confirm, Field, fmt, parseNum } from '../components/ui';
 import { Food, FOODS, isDrink, searchFoods, Unit, unitOf } from '../lib/foods';
 import { Meal, MEALS, mealForNow, scaleMacros, toDateKey } from '../lib/nutrition';
+import { cleanBarcode, lookupBarcode } from '../lib/openfoodfacts';
 import { recentFoodIds, useStore } from '../lib/store';
 import { colors } from '../lib/theme';
 
-type Mode = 'search' | 'quick' | 'custom';
+type Mode = 'search' | 'scan' | 'quick' | 'custom';
 
 const MEAL_OPTIONS = MEALS.map((m) => ({ key: m.key, label: m.label }));
 
@@ -55,6 +57,7 @@ export default function AddScreen() {
         {(
           [
             ['search', 'Suchen'],
+            ['scan', 'Scannen'],
             ['quick', 'Schnell'],
             ['custom', 'Eigenes'],
           ] as const
@@ -115,7 +118,7 @@ export default function AddScreen() {
               </View>
             }
             renderItem={({ item }) => {
-              const isCustom = item.id.startsWith('custom-');
+              const isCustom = item.id.startsWith('custom-') || item.id.startsWith('off-');
               return (
                 <Pressable
                   onPress={() => setSelected(item)}
@@ -144,6 +147,13 @@ export default function AddScreen() {
         </View>
       )}
 
+      {mode === 'scan' && (
+        <ScanPanel
+          onFound={(food) => setSelected(addCustomFood(food))}
+          onManual={() => setMode('custom')}
+        />
+      )}
+
       {mode === 'quick' && (
         <QuickAdd
           meal={meal}
@@ -167,6 +177,69 @@ export default function AddScreen() {
         />
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+function ScanPanel({
+  onFound,
+  onManual,
+}: {
+  onFound: (food: Omit<Food, 'id'> & { id: string }) => void;
+  onManual: () => void;
+}) {
+  const [code, setCode] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'not_found' | 'no_nutrition' | 'network' | 'invalid'>('idle');
+  const [scanKey, setScanKey] = useState(0);
+  const [lastCode, setLastCode] = useState('');
+
+  const lookup = async (raw: string) => {
+    const clean = cleanBarcode(raw);
+    if (!clean) {
+      setStatus('invalid');
+      return;
+    }
+    setLastCode(clean);
+    setStatus('loading');
+    const result = await lookupBarcode(clean);
+    if (result.ok) {
+      setStatus('idle');
+      onFound({ ...result.food, id: `off-${clean}` });
+    } else {
+      setStatus(result.reason);
+    }
+  };
+
+  const messages: Record<string, string> = {
+    loading: '🔎 Suche Produkt …',
+    not_found: `Das Produkt mit dem Code ${lastCode} ist (noch) nicht in der Datenbank. Lege es unter „Eigenes“ mit den Werten vom Etikett an.`,
+    no_nutrition: `Das Produkt ${lastCode} ist bekannt, hat aber keine Nährwerte hinterlegt. Lege es unter „Eigenes“ an.`,
+    network: 'Keine Verbindung zur Produktdatenbank. Prüfe dein Internet und versuche es nochmal.',
+    invalid: 'Ein Barcode hat 8 bis 14 Ziffern. Bitte prüfe deine Eingabe.',
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      {status === 'idle' || status === 'loading' ? (
+        <BarcodeScanner key={scanKey} onDetected={(c) => lookup(c)} />
+      ) : (
+        <Card>
+          <Text style={styles.hint}>{messages[status]}</Text>
+          <View style={styles.row2}>
+            <Button title="Nochmal scannen" variant="secondary" onPress={() => { setStatus('idle'); setScanKey((k) => k + 1); }} style={{ flex: 1 }} />
+            {status !== 'network' && status !== 'invalid' && <Button title="Eigenes anlegen" onPress={onManual} style={{ flex: 1 }} />}
+          </View>
+        </Card>
+      )}
+      {status === 'loading' && <Text style={[styles.hint, { textAlign: 'center' }]}>{messages.loading}</Text>}
+      <Card>
+        <Text style={styles.hint}>Kamera klappt nicht? Tippe die Zahlen unter dem Strichcode ein:</Text>
+        <View style={styles.row2}>
+          <Field label="Barcode" value={code} onChangeText={setCode} keyboardType="number-pad" placeholder="z. B. 9001234567890" />
+        </View>
+        <Button title="Produkt suchen" disabled={!code.trim() || status === 'loading'} onPress={() => lookup(code)} style={{ marginTop: 12 }} />
+      </Card>
+      <Text style={[styles.foodMeta, { textAlign: 'center' }]}>Produktdaten von Open Food Facts (openfoodfacts.org)</Text>
+    </ScrollView>
   );
 }
 

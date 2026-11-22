@@ -8,6 +8,7 @@ Eine Kalorienzähler-App mit [Expo](https://expo.dev) (SDK 58), Expo Router und 
 - **Hinzufügen:**
   - Suche in rund 180 Lebensmitteln, Getränken und Gerichten (u. a. österreichische, türkische und italienische Küche) (Nährwerte pro 100 g bzw. 100 ml) mit Portionsvorschlägen
   - Filter „Getränke“ (Wasser, Kaffee, Tee, Säfte, Softdrinks, Alkohol …), Mengen in ml
+  - **Barcode-Scanner:** Strichcode von Verpackungen scannen (oder Nummer eintippen), Nährwerte kommen aus der freien Datenbank Open Food Facts
   - „Zuletzt verwendet“ für schnelles Wiederholen
   - Schnelleingabe nur mit Kalorien (z. B. Restaurant)
   - Eigene Lebensmittel anlegen (werden gespeichert und tauchen in der Suche auf)

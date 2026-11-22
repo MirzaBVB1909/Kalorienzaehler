@@ -31,7 +31,8 @@ type Store = State & {
   addEntry: (e: Omit<Entry, 'id' | 'createdAt'>) => void;
   removeEntry: (id: string) => void;
   updateProfile: (p: Partial<Profile>) => void;
-  addCustomFood: (f: Omit<Food, 'id'>) => Food;
+  /** Speichert ein eigenes Lebensmittel; mit `id` wird ein vorhandenes gleicher id ersetzt (z. B. Barcode-Produkte). */
+  addCustomFood: (f: Omit<Food, 'id'> & { id?: string }) => Food;
   removeCustomFood: (id: string) => void;
   logWeight: (kg: number) => void;
   resetAll: () => void;
@@ -91,9 +92,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, profile: { ...s.profile, ...p } }));
   }, []);
 
-  const addCustomFood = useCallback((f: Omit<Food, 'id'>) => {
-    const food: Food = { ...f, id: `custom-${uid()}` };
-    setState((s) => ({ ...s, customFoods: [food, ...s.customFoods] }));
+  const addCustomFood = useCallback((f: Omit<Food, 'id'> & { id?: string }) => {
+    const food: Food = { ...f, id: f.id ?? `custom-${uid()}` };
+    setState((s) => ({ ...s, customFoods: [food, ...s.customFoods.filter((c) => c.id !== food.id)] }));
     return food;
   }, []);
 
