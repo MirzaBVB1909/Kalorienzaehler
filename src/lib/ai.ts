@@ -134,6 +134,8 @@ export function suggestRecipes(input: {
   diet: string[];
   budgetPerServing: number | null;
   budgetWeekly: number | null;
+  adults: number;
+  kids: number;
 }): Promise<RecipeResult> {
   return post<RecipeResult>('/api/recipes', input);
 }

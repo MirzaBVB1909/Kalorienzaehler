@@ -51,6 +51,7 @@ export default function ProfileScreen() {
     recipePrefs: store.recipePrefs,
     dietRules: store.dietRules,
     budgets: store.budgets,
+    household: store.household,
   });
 
   const runExport = async (kind: 'backup' | 'csv') => {

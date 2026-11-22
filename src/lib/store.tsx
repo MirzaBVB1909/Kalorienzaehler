@@ -20,6 +20,8 @@ export type WeightLog = { date: string; kg: number };
 /** price: Preis in € (aus Angebot oder geschätzt), null = unbekannt. */
 export type ShoppingItem = { id: string; name: string; amount: string; store: string; checked: boolean; price?: number | null; estimated?: boolean };
 export type Budgets = { perServing: number | null; weekly: number | null };
+/** Personen im Haushalt – für Rezeptmengen und Einkaufsliste. */
+export type Household = { adults: number; kids: number };
 export type Offer = { id: string; product: string; price: string; store: string; valid: string; category: string; addedAt: number };
 
 export type State = {
@@ -38,6 +40,7 @@ export type State = {
   /** Verbindliche Ernährungsregeln (z. B. "Kein Schweinefleisch", "Vegan"). */
   dietRules: string[];
   budgets: Budgets;
+  household: Household;
 };
 
 type Store = State & {
@@ -67,6 +70,7 @@ type Store = State & {
   setRecipePrefs: (prefs: string[]) => void;
   setDietRules: (rules: string[]) => void;
   setBudgets: (b: Partial<Budgets>) => void;
+  setHousehold: (h: Partial<Household>) => void;
   /** Ersetzt alle Daten (Wiederherstellen aus einer Sicherung). */
   replaceAll: (s: State) => void;
   resetAll: () => void;
@@ -86,6 +90,7 @@ const INITIAL: State = {
   recipePrefs: [],
   dietRules: [],
   budgets: { perServing: null, weekly: null },
+  household: { adults: 1, kids: 0 },
 };
 
 /** Ergänzt fehlende Felder (ältere Speicherstände, Sicherungsdateien). */
@@ -103,6 +108,7 @@ export function normalizeState(parsed: Partial<State>): State {
     recipePrefs: Array.isArray(parsed.recipePrefs) ? parsed.recipePrefs : [],
     dietRules: Array.isArray(parsed.dietRules) ? parsed.dietRules : [],
     budgets: { perServing: null, weekly: null, ...(parsed.budgets ?? {}) },
+    household: { adults: 1, kids: 0, ...(parsed.household ?? {}) },
     profile: { ...DEFAULT_PROFILE, ...parsed.profile },
   };
 }
@@ -229,6 +235,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setRecipePrefs = useCallback((prefs: string[]) => setState((s) => ({ ...s, recipePrefs: prefs })), []);
   const setDietRules = useCallback((rules: string[]) => setState((s) => ({ ...s, dietRules: rules })), []);
   const setBudgets = useCallback((b: Partial<Budgets>) => setState((s) => ({ ...s, budgets: { ...s.budgets, ...b } })), []);
+  const setHousehold = useCallback((h: Partial<Household>) => setState((s) => ({ ...s, household: { ...s.household, ...h } })), []);
 
   const replaceAll = useCallback((next: State) => setState(normalizeState(next)), []);
   const resetAll = useCallback(() => setState(INITIAL), []);
@@ -260,6 +267,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRecipePrefs,
       setDietRules,
       setBudgets,
+      setHousehold,
       replaceAll,
       resetAll,
     }),
@@ -288,6 +296,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRecipePrefs,
       setDietRules,
       setBudgets,
+      setHousehold,
       replaceAll,
       resetAll,
     ],

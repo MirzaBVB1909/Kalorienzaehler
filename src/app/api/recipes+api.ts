@@ -73,6 +73,8 @@ export async function POST(request: Request) {
     diet?: string[];
     budgetPerServing?: number | null;
     budgetWeekly?: number | null;
+    adults?: number;
+    kids?: number;
   };
   try {
     body = await request.json();
@@ -88,22 +90,32 @@ export async function POST(request: Request) {
   const diet = (body.diet ?? []).filter((d) => typeof d === 'string').slice(0, 10);
   const budgetPerServing = typeof body.budgetPerServing === 'number' && body.budgetPerServing > 0 ? body.budgetPerServing : null;
   const budgetWeekly = typeof body.budgetWeekly === 'number' && body.budgetWeekly > 0 ? body.budgetWeekly : null;
+  const adults = Math.min(10, Math.max(1, Math.round(Number(body.adults) || 1)));
+  const kids = Math.min(10, Math.max(0, Math.round(Number(body.kids) || 0)));
+  const household =
+    kids > 0
+      ? `${adults} Erwachsene${adults === 1 ? 'r' : ''} und ${kids} Kind${kids === 1 ? '' : 'er'} (Kinderportion ≈ halbe Erwachsenenportion)`
+      : `${adults} Person${adults === 1 ? '' : 'en'}`;
+  const servings = adults + kids;
 
   const lines: string[] = [];
   if (weekplan) {
     lines.push(
-      `Erstelle einen Wochenplan mit ${days} Hauptgerichten (Abendessen) für ${days} Tage, je 2 Portionen, und eine zusammengefasste Einkaufsliste.`,
+      `Erstelle einen Wochenplan mit ${days} Hauptgerichten (Abendessen) für ${days} Tage und eine zusammengefasste Einkaufsliste.`,
+      `Haushalt: ${household}. Jedes Rezept mit servings = ${servings}; Zutatenmengen und Einkaufsliste für den ganzen Haushalt.`,
       `Tageskalorienziel: ${Math.round(body.dailyKcal ?? 2000)} kcal – ein Hauptgericht sollte etwa 30–40 % davon pro Portion haben.`,
     );
   } else {
     lines.push(
       'Schlage 3 unterschiedliche Rezepte für die nächste Mahlzeit vor.',
+      `Haushalt: ${household}. Jedes Rezept mit servings = ${servings}; Zutatenmengen für alle zusammen.`,
       `Heute noch übrig: ${Math.round(body.kcalLeft ?? 600)} kcal und ${Math.round(body.proteinLeft ?? 30)} g Eiweiß – eine Portion soll da hineinpassen (eher etwas darunter).`,
       'shopping_list leer lassen.',
     );
   }
   if (diet.length) lines.push(`VERBINDLICHE Ernährungsregeln: ${diet.join(', ')}.`);
-  if (weekplan && budgetWeekly) lines.push(`Budget: Die gesamte Einkaufsliste darf höchstens ${budgetWeekly.toFixed(2)} € kosten.`);
+  lines.push('Kalorien, Nährwerte, Gewicht und Kosten "pro Portion" beziehen sich immer auf eine Erwachsenenportion.');
+  if (weekplan && budgetWeekly) lines.push(`Budget: Die gesamte Einkaufsliste für den ganzen Haushalt darf höchstens ${budgetWeekly.toFixed(2)} € kosten.`);
   if (!weekplan && budgetPerServing) lines.push(`Budget: höchstens ${budgetPerServing.toFixed(2)} € pro Portion.`);
   if (prefs.length) lines.push(`Vorlieben: ${prefs.join(', ')}.`);
   if (pantry) lines.push(`Vorhanden zu Hause: ${pantry}`);

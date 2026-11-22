@@ -72,7 +72,7 @@ export default function PlannerScreen() {
 /* ───────────────────────── Rezepte ───────────────────────── */
 
 function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
-  const { entries, profile, offers, recipePrefs, setRecipePrefs, dietRules, setDietRules, budgets, setBudgets, addEntry, addShopping, addCustomFood } = useStore();
+  const { entries, profile, offers, recipePrefs, setRecipePrefs, dietRules, setDietRules, budgets, setBudgets, household, setHousehold, addEntry, addShopping, addCustomFood } = useStore();
   const [perServingText, setPerServingText] = useState(budgetText(budgets.perServing));
   const [weeklyText, setWeeklyText] = useState(budgetText(budgets.weekly));
   const [pantry, setPantry] = useState('');
@@ -113,6 +113,8 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
         diet: dietRules,
         budgetPerServing: budgets.perServing,
         budgetWeekly: budgets.weekly,
+        adults: household.adults,
+        kids: household.kids,
       });
       setResult({ ...res, mode });
     } catch (err) {
@@ -174,6 +176,11 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
         <Text style={styles.muted}>
           Heute noch übrig: <Text style={styles.strong}>{kcalLeft} kcal</Text> · {Math.round(proteinLeft)} g Eiweiß
         </Text>
+        <Text style={[styles.label, { marginTop: 12 }]}>Haushalt – für wie viele kochst du?</Text>
+        <View style={styles.householdRow}>
+          <Stepper label="Erwachsene" value={household.adults} min={1} max={10} onChange={(adults) => setHousehold({ adults })} />
+          <Stepper label="Kinder" value={household.kids} min={0} max={10} onChange={(kids) => setHousehold({ kids })} />
+        </View>
         <Text style={[styles.label, { marginTop: 12 }]}>Ernährung (wird immer eingehalten)</Text>
         <View style={styles.chips}>
           {DIET.map((d) => {
@@ -219,7 +226,9 @@ function RecipesSection({ onGoShopping }: { onGoShopping: () => void }) {
 
       <Card>
         <SectionTitle>Wochenplan + Einkaufsliste</SectionTitle>
-        <Text style={styles.muted}>Abendessen für mehrere Tage (je 2 Portionen) – mit fertiger Einkaufsliste, bevorzugt aus deinen Angeboten.</Text>
+        <Text style={styles.muted}>
+          Abendessen für mehrere Tage für deinen Haushalt ({household.adults} Erw.{household.kids ? ` + ${household.kids} Kind${household.kids === 1 ? '' : 'er'}` : ''}) – mit fertiger Einkaufsliste, bevorzugt aus deinen Angeboten.
+        </Text>
         <Field
           label="Budget für den ganzen Einkauf (optional)"
           suffix="€"
@@ -321,7 +330,7 @@ function RecipeCard({ recipe: r, onLog, onSave, onShopping }: { recipe: RecipeSu
       </Pressable>
       {open && (
         <View style={{ marginTop: 8 }}>
-          <Text style={styles.label}>Zutaten ({r.servings} Portionen)</Text>
+          <Text style={styles.label}>Zutaten für {r.servings} {r.servings === 1 ? 'Portion' : 'Portionen'}</Text>
           {r.ingredients.map((ing, i) => (
             <Text key={i} style={styles.text}>
               • {ing.amount} {ing.name}
@@ -345,6 +354,33 @@ function RecipeCard({ recipe: r, onLog, onSave, onShopping }: { recipe: RecipeSu
         <Button title="Speichern" variant="secondary" onPress={onSave} style={styles.smallBtn} />
       </View>
     </Card>
+  );
+}
+
+function Stepper({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
+  return (
+    <View style={styles.stepper}>
+      <Text style={styles.muted}>{label}</Text>
+      <View style={styles.stepperRow}>
+        <Pressable
+          accessibilityLabel={`${label} weniger`}
+          disabled={value <= min}
+          onPress={() => onChange(Math.max(min, value - 1))}
+          style={[styles.stepBtn, value <= min && { opacity: 0.35 }]}
+        >
+          <Text style={styles.stepBtnText}>−</Text>
+        </Pressable>
+        <Text style={styles.stepValue}>{value}</Text>
+        <Pressable
+          accessibilityLabel={`${label} mehr`}
+          disabled={value >= max}
+          onPress={() => onChange(Math.min(max, value + 1))}
+          style={[styles.stepBtn, value >= max && { opacity: 0.35 }]}
+        >
+          <Text style={styles.stepBtnText}>+</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -668,6 +704,12 @@ const styles = StyleSheet.create({
   chip: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipDiet: { backgroundColor: colors.protein, borderColor: colors.protein },
+  householdRow: { flexDirection: 'row', gap: 12 },
+  stepper: { flex: 1, backgroundColor: colors.bg, borderRadius: 12, padding: 10, alignItems: 'center' },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 6 },
+  stepBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  stepBtnText: { fontSize: 22, fontWeight: '700', color: colors.primary, marginTop: -2 },
+  stepValue: { fontSize: 20, fontWeight: '800', color: colors.text, minWidth: 24, textAlign: 'center' },
   chipText: { fontSize: 14, color: colors.text },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
